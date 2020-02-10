@@ -1,0 +1,18 @@
+BasedOnStyle: Microsoft
+ColumnLimit: 80
+
+PointerAlignment: Left
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^<[^/]+>'
+    Priority: 1
+  - Regex: '^<(clang|llvm)'
+    Priority: 2
+  - Regex: '^<lava'
+    Priority: 3
+  - Regex: '^<'
+    Priority: 4
+  - Regex: '.*'
+    Priority: 5
+PointerAlignment: Left
+AlwaysBreakTemplateDeclarations: Yes
