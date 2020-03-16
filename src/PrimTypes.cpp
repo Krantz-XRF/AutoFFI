@@ -7,9 +7,6 @@
 #include <llvm/IR/DiagnosticInfo.h>
 
 #include <lava/assert.h>
-#include <lava/format.h>
-
-namespace fmt = lava::format;
 
 std::string ffi::ScalarType::as_haskell() const noexcept
 {

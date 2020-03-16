@@ -16,7 +16,6 @@
 #include <llvm/Support/InitLLVM.h>
 
 #include <lava/assert.h>
-#include <lava/format.h>
 
 #include "Config.h"
 #include "Entity.h"
@@ -30,7 +29,6 @@
 #include "YAML.h"
 
 namespace tool = clang::tooling;
-namespace fmt = lava::format;
 namespace cl = llvm::cl;
 
 namespace
