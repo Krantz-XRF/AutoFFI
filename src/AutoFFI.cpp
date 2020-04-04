@@ -17,6 +17,8 @@
 
 #include <lava/assert.h>
 
+#include <fmt/format.h>
+
 #include "Config.h"
 #include "Entity.h"
 #include "Function.h"
@@ -42,8 +44,7 @@ cl::opt<bool> Yaml{"yaml", cl::desc{"Dump YAML for entities."},
                    cl::cat{category}};
 cl::opt<bool> Verbose{"verbose", cl::desc{"Print verbose output message."},
                       cl::cat{category}};
-cl::list<std::string> ConfigFiles{cl::Positional,
-                                  cl::desc{"[<file> ...] [-- clang options]"},
+cl::list<std::string> ConfigFiles{cl::Positional, cl::desc{"[<file> ...]"},
                                   cl::cat{category}};
 const char version[]{"auto-FFI 2020"};
 } // namespace
@@ -74,7 +75,11 @@ class VariableCallback : public MatchFinder::MatchCallback,
 
     bool handleBeginSource(clang::CompilerInstance& CI) override
     {
-        const auto& fileName = cfg.FileNames[modules.size()];
+        auto& srcMan = CI.getSourceManager();
+        const auto mainID = srcMan.getMainFileID();
+        const auto fileEntry = srcMan.getFileEntryForID(mainID);
+        expects(fileEntry != nullptr);
+        const auto& fileName = fileEntry->getName();
         currentModule = &modules[fileName];
         isHeaderGroup =
             std::find(cfg.IsHeaderGroup.cbegin(), cfg.IsHeaderGroup.cend(),
@@ -162,8 +167,8 @@ int main(int argc, const char* argv[])
     cl::ParseCommandLineOptions(
         argc, argv,
         "A tool to generate Haskell FFI binding for C/C++ API.\n\n"
-        "It reads the code from the <file>s and writes the result to the "
-        "standard output.\n");
+        "It reads the configuration from the <file>s and writes the result to "
+        "the specified output files.\n");
 
     // Help message
     if (Help)
@@ -194,8 +199,9 @@ int main(int argc, const char* argv[])
         auto contents = llvm::MemoryBuffer::getFile(cfgFile);
         if (auto ec = contents.getError())
         {
-            llvm::errs() << "Failed to load configuration file \"" << cfgFile
-                         << "\": " << ec.message() << '\n';
+            llvm::errs() << format(
+                FMT_STRING("Failed to load configuration file \"{}\": {}\n"),
+                cfgFile, ec.message());
             continue;
         }
         llvm::yaml::Input input{contents.get()->getBuffer()};
@@ -220,8 +226,8 @@ int main(int argc, const char* argv[])
         match::VariableCallback varPrinter{cfg};
         finder.addMatcher(match::entity, &varPrinter);
 
-        auto action = tool::newFrontendActionFactory(&finder, &varPrinter);
-        auto status = tool.run(action.get());
+        const auto status = tool.run(
+            tool::newFrontendActionFactory(&finder, &varPrinter).get());
         if (status)
             return status;
 

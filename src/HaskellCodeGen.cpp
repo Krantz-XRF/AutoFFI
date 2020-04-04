@@ -1,6 +1,6 @@
 #include "HaskellCodeGen.h"
 
-#include <llvm/Support/FormatVariadic.h>
+#include <fmt/format.h>
 
 void ffi::HaskellCodeGen::genModule(const std::string& name,
                                     const ModuleContents& mod) noexcept
@@ -13,15 +13,15 @@ void ffi::HaskellCodeGen::genModule(const std::string& name,
 
     namespace fs = llvm::sys::fs;
     auto mname = cfg.ModuleMarshaller.transform(name);
-    std::string parentDir =
-        llvm::formatv("{0}/{1}/LowLevel", cfg.OutputDirectory, cfg.LibraryName);
-    std::string modFile = llvm::formatv("{0}/{1}.hs", parentDir, mname);
+    std::string parentDir = format(FMT_STRING("{}/{}/LowLevel"),
+                                   cfg.OutputDirectory, cfg.LibraryName);
+    std::string modFile = format(FMT_STRING("{}/{}.hs"), parentDir, mname);
     llvm::sys::fs::create_directories(parentDir);
     std::error_code ec;
     llvm::raw_fd_ostream ofs{modFile, ec};
     if (ec)
     {
-        llvm::errs() << "Cannot open file '" << modFile << "'.\n";
+        llvm::errs() << format(FMT_STRING("Cannot open file '{}'.\n"), modFile);
         return;
     }
     os = &ofs;
