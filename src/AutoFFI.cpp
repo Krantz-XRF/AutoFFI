@@ -2,13 +2,6 @@
 #include <iostream>
 #include <map>
 
-#include <clang/AST/AST.h>
-#include <clang/ASTMatchers/ASTMatchFinder.h>
-#include <clang/ASTMatchers/ASTMatchers.h>
-#include <clang/ASTMatchers/ASTMatchersMacros.h>
-#include <clang/Basic/Diagnostic.h>
-#include <clang/Frontend/CompilerInstance.h>
-#include <clang/Frontend/FrontendActions.h>
 #include <clang/Tooling/CompilationDatabase.h>
 #include <clang/Tooling/Tooling.h>
 #include <llvm/Support/CommandLine.h>
@@ -20,14 +13,8 @@
 #include <fmt/format.h>
 
 #include "Config.h"
-#include "Entity.h"
-#include "Function.h"
+#include "Driver.h"
 #include "HaskellCodeGen.h"
-#include "MatcherWrapper.h"
-#include "Module.h"
-#include "PrimTypes.h"
-#include "Types.h"
-#include "VisitTypes.h"
 #include "YAML.h"
 
 namespace tool = clang::tooling;
@@ -48,113 +35,6 @@ cl::list<std::string> ConfigFiles{cl::Positional, cl::desc{"[<file> ...]"},
                                   cl::cat{category}};
 const char version[]{"auto-FFI 2020"};
 } // namespace
-
-namespace match
-{
-using namespace clang::ast_matchers;
-
-auto isPublicAPI =
-    allOf(hasExternalFormalLinkage(), unless(isExpansionInSystemHeader()),
-          anyOf(hasDeclContext(translationUnitDecl()),
-                hasDeclContext(linkageSpecDecl())));
-
-DeclarationMatcher variable = varDecl(isPublicAPI).bind("var");
-DeclarationMatcher function = functionDecl(isPublicAPI).bind("func");
-DeclarationMatcher enums = enumDecl(isPublicAPI).bind("enum");
-DeclarationMatcher structs = recordDecl(isPublicAPI).bind("struct");
-DeclarationMatcher typedefs = typedefNameDecl(isPublicAPI).bind("typedef");
-DeclarationMatcher entity = anyOf(variable, function, typedefs, enums, structs);
-
-class VariableCallback : public MatchFinder::MatchCallback,
-                         public tool::SourceFileCallbacks
-{
-  public:
-    VariableCallback(config::Config& cfg) : cfg{cfg}, currentModule{nullptr}
-    {
-    }
-
-    bool handleBeginSource(clang::CompilerInstance& CI) override
-    {
-        auto& srcMan = CI.getSourceManager();
-        const auto mainID = srcMan.getMainFileID();
-        const auto fileEntry = srcMan.getFileEntryForID(mainID);
-        expects(fileEntry != nullptr);
-        const auto& fileName = fileEntry->getName();
-        currentModule = &modules[fileName];
-        isHeaderGroup =
-            std::find(cfg.IsHeaderGroup.cbegin(), cfg.IsHeaderGroup.cend(),
-                      fileName) != cfg.IsHeaderGroup.cend();
-        return true;
-    }
-
-    void handleEndSource() override
-    {
-    }
-
-    bool checkDecl(clang ::SourceManager& sm, const clang::Decl* decl) const
-        noexcept
-    {
-        if (!decl)
-            return false;
-        if (isHeaderGroup)
-            return true;
-        auto ExpansionLoc = sm.getExpansionLoc(decl->getBeginLoc());
-        if (ExpansionLoc.isInvalid())
-            return false;
-        return sm.isInMainFile(ExpansionLoc);
-    }
-
-    void run(const MatchFinder::MatchResult& result) override
-    {
-        auto& sm = *result.SourceManager;
-        auto& nodes = result.Nodes;
-        auto& diags = result.Context->getDiagnostics();
-        ffi::Visitor visitor{cfg, *result.Context};
-        if (auto decl = nodes.getNodeAs<clang::VarDecl>("var");
-            checkDecl(sm, decl))
-        {
-            auto var = visitor.matchVar(*decl);
-            if (var.has_value())
-                currentModule->entities.push_back(std::move(var.value()));
-        }
-        else if (auto decl = nodes.getNodeAs<clang::FunctionDecl>("func");
-                 checkDecl(sm, decl))
-        {
-            auto func = visitor.matchFunction(*decl);
-            if (func.has_value())
-                currentModule->entities.push_back(std::move(func.value()));
-        }
-        else if (auto decl = nodes.getNodeAs<clang::EnumDecl>("enum");
-                 checkDecl(sm, decl))
-        {
-            auto enums = visitor.matchEnum(*decl);
-            if (enums.has_value())
-                currentModule->tags.insert(std::move(enums.value()));
-        }
-        else if (auto decl = nodes.getNodeAs<clang::RecordDecl>("struct");
-                 checkDecl(sm, decl))
-        {
-            auto structs = visitor.matchStruct(*decl);
-            if (structs.has_value())
-                currentModule->tags.insert(std::move(structs.value()));
-        }
-        else if (auto decl = nodes.getNodeAs<clang::TypedefNameDecl>("typedef");
-                 checkDecl(sm, decl))
-        {
-            auto res = visitor.matchTypedef(*decl);
-            if (res.has_value())
-                currentModule->tags.insert(std::move(res.value()));
-        }
-    }
-
-    std::map<std::string, ffi::ModuleContents> modules;
-
-  private:
-    config::Config& cfg;
-    ffi::ModuleContents* currentModule;
-    bool isHeaderGroup{false};
-};
-} // namespace match
 
 int main(int argc, const char* argv[])
 {
@@ -177,12 +57,13 @@ int main(int argc, const char* argv[])
         return 0;
     }
 
+    ffi::FFIDriver driver;
+
     // Configurations
-    config::Config cfg;
     if (DumpConfig)
     {
         llvm::yaml::Output output{llvm::outs()};
-        output << cfg;
+        output << driver.cfg;
         return 0;
     }
 
@@ -205,40 +86,34 @@ int main(int argc, const char* argv[])
             continue;
         }
         llvm::yaml::Input input{contents.get()->getBuffer()};
-        input >> cfg;
+        input >> driver.cfg;
         if (input.error())
             continue;
 
         // Load CWD
-        llvm::SmallVector<char, 0> currentPath;
+        llvm::SmallString<128> currentPath;
         llvm::sys::fs::current_path(currentPath);
-        if (!cfg.RootDirectory.empty())
-            llvm::sys::fs::set_current_path(cfg.RootDirectory);
+        if (!driver.cfg.RootDirectory.empty())
+            llvm::sys::fs::set_current_path(driver.cfg.RootDirectory);
 
         // Compiler options
         tool::FixedCompilationDatabase compilations{
-            cfg.RootDirectory.empty() ? "." : cfg.RootDirectory,
-            cfg.CompilerOptions};
+            driver.cfg.RootDirectory.empty() ? "." : driver.cfg.RootDirectory,
+            driver.cfg.CompilerOptions};
 
-        tool::ClangTool tool{compilations, cfg.FileNames};
+        tool::ClangTool tool{compilations, driver.cfg.FileNames};
 
-        match::MatchFinder finder;
-        match::VariableCallback varPrinter{cfg};
-        finder.addMatcher(match::entity, &varPrinter);
-
-        const auto status = tool.run(
-            tool::newFrontendActionFactory(&finder, &varPrinter).get());
-        if (status)
+        if (const auto status = tool.run(&driver))
             return status;
 
         if (Yaml)
         {
             llvm::yaml::Output output{llvm::outs()};
-            output << varPrinter.modules;
+            output << driver.modules;
         }
 
-        ffi::HaskellCodeGen codeGen{cfg};
-        for (auto& [name, mod] : varPrinter.modules)
+        ffi::HaskellCodeGen codeGen{driver.cfg};
+        for (auto& [name, mod] : driver.modules)
             codeGen.genModule(name, mod);
 
         // Recover CWD

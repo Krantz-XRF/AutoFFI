@@ -1,6 +1,6 @@
 target_sources(AutoFFI PRIVATE
   # Driver Program
-  "Config.def" "Config.h" "AutoFFI.cpp"
+  "Config.def" "Config.h" "AutoFFI.cpp" "Driver.h" "Driver.cpp"
   # C Type Information
   "Types.def" "Types.h" "Entity.h"
   "Function.h" "OpaqueType.h" "PointerType.h" "Tag.h"
@@ -10,7 +10,5 @@ target_sources(AutoFFI PRIVATE
   "Marshaller.h" "Marshaller.cpp"
   "VisitTypes.h" "VisitTypes.cpp"
   "Module.h" "Module.cpp"
-  # Clang Interface
-  "MatcherWrapper.h"
   # LLVM YAML
   "YAML.h")

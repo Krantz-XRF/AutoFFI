@@ -14,6 +14,65 @@ namespace
 #include "Types.def"
 } // namespace
 
+bool ffi::Visitor::checkDecl(const clang::Decl* decl) const noexcept
+{
+    if (!decl)
+        return false;
+    const auto& sm = context.getSourceManager();
+    auto ExpansionLoc = sm.getExpansionLoc(decl->getBeginLoc());
+    if (ExpansionLoc.isInvalid())
+        return false;
+    if (header_group)
+        return sm.isInSystemHeader(ExpansionLoc);
+    return sm.isInMainFile(ExpansionLoc);
+}
+
+void ffi::Visitor::matchTranslationUnit(const clang::TranslationUnitDecl& decl,
+                                        ModuleContents& mod) const noexcept
+{
+    for (auto d : decl.decls())
+    {
+        if (!checkDecl(d))
+            continue;
+        if (auto entity = matchEntity(*d); entity.has_value())
+            mod.entities.push_back(std::move(entity.value()));
+        else if (auto tag = matchTag(*d); tag.has_value())
+            mod.tags.emplace(std::move(tag.value()));
+    }
+}
+
+std::optional<ffi::Entity> ffi::Visitor::matchEntity(
+    const clang::Decl& decl) const noexcept
+{
+    using K = clang::Decl::Kind;
+    switch (decl.getKind())
+    {
+    case K::Var:
+        return matchVar(static_cast<const clang::VarDecl&>(decl));
+    case K::Function:
+        return matchFunction(static_cast<const clang::FunctionDecl&>(decl));
+    default:
+        return std::nullopt;
+    }
+}
+
+std::optional<ffi::TagDecl> ffi::Visitor::matchTag(
+    const clang::Decl& decl) const noexcept
+{
+    using K = clang::Decl::Kind;
+    switch (decl.getKind())
+    {
+    case K::Enum:
+        return matchStruct(static_cast<const clang::RecordDecl&>(decl));
+    case K::CXXRecord:
+        return matchStruct(static_cast<const clang::RecordDecl&>(decl));
+    case K::Typedef:
+        return matchTypedef(static_cast<const clang::TypedefNameDecl&>(decl));
+    default:
+        return std::nullopt;
+    }
+}
+
 std::optional<ffi::Type> ffi::Visitor::matchType(const clang::NamedDecl& decl,
                                                  const clang::Type& type) const
     noexcept
@@ -322,4 +381,31 @@ std::optional<ffi::Entity> ffi::Visitor::matchParam(
             << param.getName() << param.getSourceRange();
     }
     return res;
+}
+
+template <typename T>
+inline uintptr_t getFirstID(const clang::Decl& decl)
+{
+    const auto p = static_cast<const T&>(decl).getFirstDecl();
+    return reinterpret_cast<uintptr_t>(p);
+}
+
+uintptr_t ffi::getUniqueID(const clang::Decl& decl)
+{
+    using K = clang::Decl::Kind;
+    switch (decl.getKind())
+    {
+    case K::CXXRecord:
+        return getFirstID<clang::RecordDecl>(decl);
+    case K::Enum:
+        return getFirstID<clang::EnumDecl>(decl);
+    case K::Function:
+        return getFirstID<clang::FunctionDecl>(decl);
+    case K::Typedef:
+        return getFirstID<clang::TypedefNameDecl>(decl);
+    case K::Var:
+        return getFirstID<clang::VarDecl>(decl);
+    default:
+        return reinterpret_cast<uintptr_t>(&decl);
+    }
 }
