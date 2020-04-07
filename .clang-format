@@ -1,7 +1,5 @@
-BasedOnStyle: Microsoft
-ColumnLimit: 80
+BasedOnStyle: Google
 
-PointerAlignment: Left
 IncludeBlocks: Regroup
 IncludeCategories:
   - Regex: '^<[^/]+>'
@@ -15,4 +13,4 @@ IncludeCategories:
   - Regex: '.*'
     Priority: 5
 PointerAlignment: Left
-AlwaysBreakTemplateDeclarations: Yes
+DerivePointerAlignment: false

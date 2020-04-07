@@ -2,10 +2,8 @@
 
 #include <string>
 
-namespace ffi
-{
-struct OpaqueType
-{
-    std::string name;
+namespace ffi {
+struct OpaqueType {
+  std::string name;
 };
-} // namespace ffi
+}  // namespace ffi

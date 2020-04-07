@@ -6,11 +6,9 @@
 
 #include "Types.h"
 
-namespace ffi
-{
-struct Entity
-{
-    std::string name;
-    Type type;
+namespace ffi {
+struct Entity {
+  std::string name;
+  Type type;
 };
-} // namespace ffi
+}  // namespace ffi
