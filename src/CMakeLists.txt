@@ -2,7 +2,7 @@ target_sources(AutoFFI PRIVATE
   # Driver Program
   "Config.def" "Config.h" "AutoFFI.cpp" "Driver.h" "Driver.cpp"
   # C Type Information
-  "Types.def" "Types.h" "Entity.h"
+  "Types.def" "Types.h" "Types.cpp" "Entity.h"
   "Function.h" "OpaqueType.h" "PointerType.h" "Tag.h"
   "PrimTypes.def" "PrimTypes.h" "PrimTypes.cpp"
   # Haskell CodeGen

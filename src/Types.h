@@ -39,4 +39,6 @@ struct index<V<B, Args...>, A> {
 
 template <typename L, typename A>
 constexpr ptrdiff_t index = internal::index<L, A>::value;
+
+bool is_marshallable(const Type& type) noexcept;
 }  // namespace ffi
