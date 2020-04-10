@@ -13,7 +13,7 @@ auto ffi::Marshaller::from_snake_case(std::string_view name) -> pss {
 }
 
 auto ffi::Marshaller::from_CamelCase(std::string_view name) -> pss {
-  auto p = std::find_if(name.cbegin(), name.cend(), isupper);
+  auto p = std::find_if(std::next(name.cbegin()), name.cend(), isupper);
   if (p == name.cend()) return {name, {}};
   auto d = p - name.cbegin();
   return {name.substr(0, d), name.substr(d)};
@@ -67,8 +67,8 @@ std::string ffi::Marshaller::transform_raw(std::string_view name) const {
       to_snake_case, to_snake_case, to_SNAKE_CASE, to_PascalCase, to_PascalCase,
   };
 
-  auto input_case =
-      std::none_of(name.cbegin(), name.cend(), [](char c) { return c == '_'; });
+  auto input_case = std::none_of(name.cbegin(), name.cend(),
+                                 [](char c) { return !isalnum(c); });
 
   std::string res{add_prefix};
 
