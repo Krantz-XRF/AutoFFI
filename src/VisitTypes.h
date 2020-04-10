@@ -16,6 +16,7 @@ class Visitor {
       : header_group{header_group}, cfg{cfg}, context{context} {}
 
   bool checkDecl(const clang::Decl* decl) const;
+  bool checkExternC(const clang::Decl& decl) const;
 
   void matchTranslationUnit(const clang::TranslationUnitDecl& decl,
                             ModuleContents& mod) const;
@@ -38,6 +39,4 @@ class Visitor {
   config::Config& cfg;
   clang::ASTContext& context;
 };
-
-inline uintptr_t getUniqueID(const clang::Decl& decl);
 }  // namespace ffi

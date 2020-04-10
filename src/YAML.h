@@ -35,12 +35,16 @@ struct llvm::yaml::MappingTraits<ffi::FunctionType> {
 
 template <>
 struct llvm::yaml::MappingTraits<ffi::OpaqueType> {
-  static void mapping(IO& io, ffi::OpaqueType& type) { io.mapRequired("alias", type.name); }
+  static void mapping(IO& io, ffi::OpaqueType& type) {
+    io.mapRequired("alias", type.name);
+  }
 };
 
 template <>
 struct llvm::yaml::MappingTraits<ffi::PointerType> {
-  static void mapping(IO& io, ffi::PointerType& type) { io.mapRequired("pointee", type.pointee); }
+  static void mapping(IO& io, ffi::PointerType& type) {
+    io.mapRequired("pointee", type.pointee);
+  }
 };
 
 template <>
@@ -65,6 +69,7 @@ struct llvm::yaml::MappingTraits<ffi::Type> {
 template <>
 struct llvm::yaml::MappingTraits<ffi::Entity> {
   static void mapping(IO& io, ffi::Entity& entity) {
+    io.mapRequired("uid", entity.unique_id);
     io.mapRequired("name", entity.name);
     io.mapRequired("type", entity.type);
   }
@@ -128,9 +133,10 @@ struct llvm::yaml::MappingTraits<config::Config> {
       return "The universal marshaller should not specify a case or add "
              "a prefix, for modules, types and functions require "
              "different cases.";
-    else if (!std::all_of(cfg.FileMarshallers.cbegin(), cfg.FileMarshallers.cend(),
-                          [](const auto& m) {
-                            return m.second.output_case == ffi::Marshaller::Case_preserve &&
+    else if (!std::all_of(cfg.FileMarshallers.cbegin(),
+                          cfg.FileMarshallers.cend(), [](const auto& m) {
+                            return m.second.output_case ==
+                                       ffi::Marshaller::Case_preserve &&
                                    m.second.add_prefix.empty();
                           }))
       return "The file marshallers should not specify a case or add a "

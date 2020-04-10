@@ -5,19 +5,79 @@
 namespace {
 #define TYPE(TypeName)                                              \
   std::optional<ffi::Type> cast(std::optional<ffi::TypeName>&& x) { \
-    if (x.has_value()) return {{std::move(x.value())}};             \
+    if (x.has_value()) return ffi::Type{std::move(x.value())};      \
     return std::nullopt;                                            \
   }
 #include "Types.def"
+
+constexpr uintptr_t invalid_id = 0;
+
+template <typename T>
+inline uintptr_t getUniqueID(const T& decl) {
+  const auto p = decl.getFirstDecl();
+  return reinterpret_cast<uintptr_t>(p);
+}
+
+inline uintptr_t getUniqueID(const clang::Decl& decl) {
+  using K = clang::Decl::Kind;
+  switch (decl.getKind()) {
+    case K::CXXRecord:
+      return getUniqueID(static_cast<const clang::RecordDecl&>(decl));
+    case K::Enum:
+      return getUniqueID(static_cast<const clang::EnumDecl&>(decl));
+    case K::Function:
+      return getUniqueID(static_cast<const clang::FunctionDecl&>(decl));
+    case K::Typedef:
+      return getUniqueID(static_cast<const clang::TypedefNameDecl&>(decl));
+    case K::Var:
+      return getUniqueID(static_cast<const clang::VarDecl&>(decl));
+    default:
+      return reinterpret_cast<uintptr_t>(&decl);
+  }
+}
 }  // namespace
 
 bool ffi::Visitor::checkDecl(const clang::Decl* decl) const {
   if (!decl) return false;
+  if (auto ndecl = llvm::dyn_cast<clang::NamedDecl>(decl);
+      ndecl && !ndecl->hasExternalFormalLinkage()) {
+    auto& diags = context.getDiagnostics();
+    if (cfg.WarnNoExternalFormalLinkage) {
+      const auto id = diags.getCustomDiagID(
+          clang::DiagnosticsEngine::Warning,
+          "declaration for entity '%0' is ignored, because it does not "
+          "have an external formal linkage.");
+      diags.Report(decl->getLocation(), id) << ndecl->getName();
+    }
+    return false;
+  }
   const auto& sm = context.getSourceManager();
   auto ExpansionLoc = sm.getExpansionLoc(decl->getBeginLoc());
   if (ExpansionLoc.isInvalid()) return false;
-  if (header_group) return sm.isInSystemHeader(ExpansionLoc);
+  if (header_group) return !sm.isInSystemHeader(ExpansionLoc);
   return sm.isInMainFile(ExpansionLoc);
+}
+
+bool ffi::Visitor::checkExternC(const clang::Decl& decl) const {
+  using K = clang::Decl::Kind;
+  const bool isDeclExternC = [&decl] {
+    if (const auto k = decl.getKind(); k == K::Var)
+      return static_cast<const clang::VarDecl&>(decl).isExternC();
+    else if (k == K::Function)
+      return static_cast<const clang::FunctionDecl&>(decl).isExternC();
+    else
+      return true;
+  }();
+  if (!isDeclExternC && !cfg.AssumeExternC && cfg.WarnNoCLinkage) {
+    auto& diags = context.getDiagnostics();
+    const auto id = diags.getCustomDiagID(
+        clang::DiagnosticsEngine::Warning,
+        "declaration for entity '%0' is ignored, because it does not "
+        "have a C language linkage.");
+    auto& ndecl = static_cast<const clang::NamedDecl&>(decl);
+    diags.Report(decl.getLocation(), id) << ndecl.getName();
+  }
+  return isDeclExternC;
 }
 
 void ffi::Visitor::matchTranslationUnit(const clang::TranslationUnitDecl& decl,
@@ -78,7 +138,7 @@ std::optional<ffi::Type> ffi::Visitor::matchType(
     auto pointee = pointerType->getPointeeType();
     auto tk = matchType(decl, *pointee.getTypePtr());
     if (!tk.has_value()) return std::nullopt;
-    return {{PointerType{std::make_unique<Type>(std::move(tk.value()))}}};
+    return Type{PointerType{std::make_unique<Type>(std::move(tk.value()))}};
   } else if (auto refType = type.getAs<clang::ReferenceType>()) {
     const auto id = diags.getCustomDiagID(
         clang::DiagnosticsEngine::Warning,
@@ -115,11 +175,11 @@ std::optional<ffi::Type> ffi::Visitor::matchType(
     std::string typeName;
     llvm::raw_string_ostream os{typeName};
     templName.print(os, context.getPrintingPolicy());
-    return {{OpaqueType{typeName}}};
+    return Type{OpaqueType{typeName}};
   } else if (auto tagType = type.getAs<clang::TagType>()) {
     auto tagDecl = tagType->getDecl();
     auto tagName = tagDecl->getName();
-    return {{OpaqueType{tagName}}};
+    return Type{OpaqueType{tagName}};
   } else if (auto funcType = type.getAs<clang::FunctionProtoType>()) {
     if (funcType->getCallConv() != clang::CC_C) {
       const auto id = diags.getCustomDiagID(
@@ -153,10 +213,10 @@ std::optional<ffi::Type> ffi::Visitor::matchType(
         diags.Report(decl.getLocation(), id) << decl.getName() << i;
         return std::nullopt;
       }
-      func.params.push_back({"", std::move(paramType.value())});
+      func.params.push_back({invalid_id, "", std::move(paramType.value())});
     }
 
-    return {{std::move(func)}};
+    return Type{std::move(func)};
   } else {
     const auto id = diags.getCustomDiagID(
         clang::DiagnosticsEngine::Warning,
@@ -171,28 +231,26 @@ std::optional<ffi::Entity> ffi::Visitor::matchVarRaw(
     const clang::VarDecl& decl) const {
   auto type = matchType(decl, *decl.getType().getTypePtr());
   if (!type.has_value()) return std::nullopt;
-  return {{decl.getName(), std::move(type.value())}};
+  if (!is_marshallable(type.value())) {
+    auto& diags = context.getDiagnostics();
+    const auto id = diags.getCustomDiagID(
+        clang::DiagnosticsEngine::Warning,
+        "declaration is ignored, because its type is not marshallable "
+        "(marshallable types: integers, floating points, and pointers).");
+    diags.Report(decl.getLocation(), id);
+    return std::nullopt;
+  }
+  return Entity{getUniqueID(decl), decl.getName(), std::move(type.value())};
 }
 
 std::optional<ffi::Entity> ffi::Visitor::matchVar(
     const clang::VarDecl& decl) const {
-  auto& diags = context.getDiagnostics();
-  auto name = decl.getName();
-  if (!decl.isExternC() && !cfg.AssumeExternC) {
-    if (cfg.WarnNoCLinkage) {
-      const auto id = diags.getCustomDiagID(
-          clang::DiagnosticsEngine::Warning,
-          "declaration for entity '%0' is ignored, because it does not "
-          "have a C language linkage.");
-      diags.Report(decl.getLocation(), id) << name;
-    }
-    return std::nullopt;
-  }
   auto res = matchVarRaw(decl);
   if (!res.has_value()) {
+    auto& diags = context.getDiagnostics();
     const auto id = diags.getCustomDiagID(clang::DiagnosticsEngine::Note,
                                           "in declaration for variable '%0':");
-    diags.Report(decl.getLocation(), id) << name;
+    diags.Report(decl.getLocation(), id) << decl.getName();
   }
   return res;
 }
@@ -200,20 +258,7 @@ std::optional<ffi::Entity> ffi::Visitor::matchVar(
 std::optional<ffi::Entity> ffi::Visitor::matchFunction(
     const clang::FunctionDecl& decl) const {
   auto& diags = context.getDiagnostics();
-
   auto name = decl.getName();
-
-  if (!decl.isExternC() && !cfg.AssumeExternC) {
-    if (cfg.WarnNoCLinkage) {
-      const auto id = diags.getCustomDiagID(
-          clang::DiagnosticsEngine::Warning,
-          "declaration for entity '%0' is ignored, because it does not "
-          "have a C language linkage.");
-      diags.Report(decl.getLocation(), id) << name;
-    }
-    return std::nullopt;
-  }
-
   const auto reportNote = [&diags, &decl, &name] {
     const auto noteId = diags.getCustomDiagID(
         clang::DiagnosticsEngine::Note,
@@ -232,7 +277,7 @@ std::optional<ffi::Entity> ffi::Visitor::matchFunction(
     func.params.push_back(std::move(var.value()));
   }
 
-  return {{std::move(name), std::move(func)}};
+  return Entity{getUniqueID(decl), std::move(name), std::move(func)};
 }
 
 std::optional<ffi::TagDecl> ffi::Visitor::matchEnum(
@@ -269,7 +314,7 @@ std::optional<ffi::TagDecl> ffi::Visitor::matchEnum(
     enm.values.emplace_back(std::move(itemName), initVal);
   }
 
-  return {{name, std::move(enm)}};
+  return TagDecl{name, Tag{getUniqueID(decl), std::move(enm)}};
 }
 
 std::optional<ffi::TagDecl> ffi::Visitor::matchStruct(
@@ -288,7 +333,7 @@ std::optional<ffi::TagDecl> ffi::Visitor::matchStruct(
     name = defName;
   }
 
-  return {{name, Structure{}}};
+  return TagDecl{name, Tag{getUniqueID(decl), Structure{}}};
 }
 
 std::optional<ffi::TagDecl> ffi::Visitor::matchTypedef(
@@ -313,28 +358,4 @@ std::optional<ffi::Entity> ffi::Visitor::matchParam(
         << param.getName() << param.getSourceRange();
   }
   return res;
-}
-
-template <typename T>
-inline uintptr_t getFirstID(const clang::Decl& decl) {
-  const auto p = static_cast<const T&>(decl).getFirstDecl();
-  return reinterpret_cast<uintptr_t>(p);
-}
-
-uintptr_t ffi::getUniqueID(const clang::Decl& decl) {
-  using K = clang::Decl::Kind;
-  switch (decl.getKind()) {
-    case K::CXXRecord:
-      return getFirstID<clang::RecordDecl>(decl);
-    case K::Enum:
-      return getFirstID<clang::EnumDecl>(decl);
-    case K::Function:
-      return getFirstID<clang::FunctionDecl>(decl);
-    case K::Typedef:
-      return getFirstID<clang::TypedefNameDecl>(decl);
-    case K::Var:
-      return getFirstID<clang::VarDecl>(decl);
-    default:
-      return reinterpret_cast<uintptr_t>(&decl);
-  }
 }

@@ -124,10 +124,10 @@ void ffi::HaskellCodeGen::genPointerType(const PointerType& pointer) noexcept {
 
 void ffi::HaskellCodeGen::genTag(const std::string& name,
                                  const Tag& tag) noexcept {
-  if (std::holds_alternative<Enumeration>(tag))
-    genEnum(name, std::get<Enumeration>(tag));
-  else if (std::holds_alternative<Structure>(tag))
-    genStruct(name, std::get<Structure>(tag));
+  if (std::holds_alternative<Enumeration>(tag.payload))
+    genEnum(name, std::get<Enumeration>(tag.payload));
+  else if (std::holds_alternative<Structure>(tag.payload))
+    genStruct(name, std::get<Structure>(tag.payload));
 }
 
 void ffi::HaskellCodeGen::genEnum(const std::string& name,

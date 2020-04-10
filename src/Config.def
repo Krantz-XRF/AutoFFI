@@ -9,6 +9,7 @@
 FIELD_OPTIONAL(bool, AllowCustomFixedSizeInt, false)
 FIELD_OPTIONAL(bool, AssumeExternC, false)
 FIELD_OPTIONAL(bool, WarnNoCLinkage, true)
+FIELD_OPTIONAL(bool, WarnNoExternalFormalLinkage, false)
 FIELD_OPTIONAL(ffi::Marshaller, Marshaller, )
 FIELD_OPTIONAL(ffi::Marshaller, ModuleMarshaller, ffi::Marshaller::Case_PascalCase)
 FIELD_OPTIONAL(ffi::Marshaller, TypeMarshaller, ffi::Marshaller::Case_PascalCase)

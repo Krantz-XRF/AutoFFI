@@ -14,6 +14,10 @@ struct Enumeration {
   std::vector<std::pair<std::string, intmax_t>> values;
 };
 
-using Tag = std::variant<Structure, Enumeration>;
+struct Tag {
+  uintptr_t unique_id;
+  std::variant<Structure, Enumeration> payload;
+};
+
 using TagDecl = std::pair<std::string, Tag>;
 }  // namespace ffi

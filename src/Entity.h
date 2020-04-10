@@ -8,6 +8,7 @@
 
 namespace ffi {
 struct Entity {
+  uintptr_t unique_id;
   std::string name;
   Type type;
 };
