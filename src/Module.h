@@ -4,12 +4,12 @@
 #include <string>
 #include <vector>
 
-#include "Entity.h"
 #include "Tag.h"
+#include "Types.h"
 
 namespace ffi {
 struct ModuleContents {
-  std::vector<Entity> entities;
+  std::map<std::string, Type> entities;
   std::map<std::string, Tag> tags;
   std::vector<std::string> imports;
 };

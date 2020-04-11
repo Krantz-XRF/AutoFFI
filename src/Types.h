@@ -21,6 +21,9 @@ struct Type {
   type value;
 };
 
+using Entity = std::pair<std::string, Type>;
+using ConstEntity = const std::pair<const std::string, Type>;
+
 namespace internal {
 template <typename L, typename A>
 struct index;

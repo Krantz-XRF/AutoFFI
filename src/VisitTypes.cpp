@@ -1,7 +1,5 @@
 #include "VisitTypes.h"
 
-#include "Entity.h"
-
 namespace {
 constexpr uintptr_t invalid_id = 0;
 
@@ -78,7 +76,8 @@ void ffi::Visitor::matchTranslationUnit(const clang::TranslationUnitDecl& decl,
   for (auto d : decl.decls()) {
     if (!checkDecl(d)) continue;
     if (auto entity = matchEntity(*d); entity.has_value())
-      mod.entities.push_back(std::move(entity.value()));
+      mod.entities.try_emplace(std::move(entity->first),
+                               std::move(entity->second));
     else if (auto tag = matchTag(*d); tag.has_value())
       mod.tags.emplace(std::move(tag.value()));
   }
@@ -271,7 +270,7 @@ std::optional<ffi::Entity> ffi::Visitor::matchFunction(
     func.params.push_back(std::move(var.value()));
   }
 
-  return Entity{std::move(name), std::move(func)};
+  return Entity{std::move(name), Type{std::move(func)}};
 }
 
 std::optional<ffi::TagDecl> ffi::Visitor::matchEnum(

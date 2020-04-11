@@ -18,7 +18,7 @@ class HaskellCodeGen {
   void genTypeName(const std::string& name) noexcept;
   void genConstName(const std::string& name) noexcept;
 
-  void genEntity(const Entity& entity) noexcept;
+  void genEntity(ConstEntity& entity) noexcept;
   void genType(const Type& type, bool paren = false) noexcept;
   void genFunctionType(const FunctionType& func) noexcept;
   void genScalarType(const ScalarType& scalar) noexcept;

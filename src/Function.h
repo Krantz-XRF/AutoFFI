@@ -1,11 +1,12 @@
 #pragma once
 
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace ffi {
 struct Type;
-struct Entity;
+using Entity = std::pair<std::string, Type>;
 
 struct FunctionType {
   std::unique_ptr<Type> returnType;

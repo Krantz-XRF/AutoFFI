@@ -7,7 +7,6 @@
 #include <llvm/ObjectYAML/YAML.h>
 
 #include "Config.h"
-#include "Entity.h"
 #include "Function.h"
 #include "Marshaller.h"
 #include "Module.h"
@@ -69,8 +68,8 @@ struct llvm::yaml::MappingTraits<ffi::Type> {
 template <>
 struct llvm::yaml::MappingTraits<ffi::Entity> {
   static void mapping(IO& io, ffi::Entity& entity) {
-    io.mapRequired("name", entity.name);
-    io.mapRequired("type", entity.type);
+    io.mapRequired("name", entity.first);
+    io.mapRequired("type", entity.second);
   }
 };
 LLVM_YAML_IS_SEQUENCE_VECTOR(ffi::Entity)

@@ -42,7 +42,7 @@ void ffi::HaskellCodeGen::genModule(const std::string& name,
   for (auto& imp : mod.imports) *os << "import " << imp << '\n';
   if (!mod.imports.empty()) *os << '\n';
   for (auto& [name, tag] : mod.tags) genTag(name, tag);
-  for (auto& entity : mod.entities) genEntity(entity);
+  for (const auto& entity : mod.entities) genEntity(entity);
 }
 
 void ffi::HaskellCodeGen::genModulePrefix() noexcept {
@@ -53,12 +53,12 @@ void ffi::HaskellCodeGen::genModuleName(const std::string& name) noexcept {
   *os << cfg.ModuleMarshaller.transform(name);
 }
 
-void ffi::HaskellCodeGen::genEntity(const Entity& entity) noexcept {
+void ffi::HaskellCodeGen::genEntity(ConstEntity& entity) noexcept {
   clear_fresh_variable();
-  *os << "foreign import ccall \"" << entity.name << "\" ";
-  genFuncName(entity.name);
+  *os << "foreign import ccall \"" << entity.first << "\" ";
+  genFuncName(entity.first);
   *os << " :: ";
-  genType(entity.type);
+  genType(entity.second);
   *os << '\n';
 }
 
@@ -90,7 +90,7 @@ void ffi::HaskellCodeGen::genType(const Type& type, bool paren) noexcept {
 
 void ffi::HaskellCodeGen::genFunctionType(const FunctionType& func) noexcept {
   for (const auto& tp : func.params) {
-    genType(tp.type);
+    genType(tp.second);
     *os << " -> ";
   }
   *os << "IO ";
