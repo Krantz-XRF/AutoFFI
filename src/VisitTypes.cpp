@@ -101,7 +101,8 @@ std::optional<ffi::TagDecl> ffi::Visitor::matchTag(
   using K = clang::Decl::Kind;
   switch (decl.getKind()) {
     case K::Enum:
-      return matchStruct(static_cast<const clang::RecordDecl&>(decl));
+      return matchEnum(static_cast<const clang::EnumDecl&>(decl));
+    case K::Record:
     case K::CXXRecord:
       return matchStruct(static_cast<const clang::RecordDecl&>(decl));
     case K::Typedef:
@@ -304,7 +305,7 @@ std::optional<ffi::TagDecl> ffi::Visitor::matchEnum(
   for (auto item : decl.enumerators()) {
     auto itemName = item->getName();
     auto initVal = item->getInitVal().getExtValue();
-    enm.values.emplace_back(std::move(itemName), initVal);
+    enm.values.try_emplace(std::move(itemName), initVal);
   }
 
   return TagDecl{name, Tag{std::move(enm)}};
@@ -326,7 +327,14 @@ std::optional<ffi::TagDecl> ffi::Visitor::matchStruct(
     name = defName;
   }
 
-  return TagDecl{name, Tag{Structure{}}};
+  Structure record;
+  for (auto f : decl.fields()) {
+    auto type = matchType(*f, *f->getType().getTypePtr());
+    if (!type.has_value()) return std::nullopt;
+    record.fields.push_back({f->getName(), std::move(type.value())});
+  }
+
+  return TagDecl{name, Tag{std::move(record)}};
 }
 
 std::optional<ffi::TagDecl> ffi::Visitor::matchTypedef(

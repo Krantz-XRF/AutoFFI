@@ -53,13 +53,18 @@ void ffi::HaskellCodeGen::genModuleName(const std::string& name) noexcept {
   *os << cfg.ModuleMarshaller.transform(name);
 }
 
-void ffi::HaskellCodeGen::genEntity(ConstEntity& entity) noexcept {
+void ffi::HaskellCodeGen::genEntityRaw(const std::string& name,
+                                       const Type& type) noexcept {
   clear_fresh_variable();
-  *os << "foreign import ccall \"" << entity.first << "\" ";
-  genFuncName(entity.first);
+  genFuncName(name);
   *os << " :: ";
-  genType(entity.second);
+  genType(type);
   *os << '\n';
+}
+
+void ffi::HaskellCodeGen::genEntity(ConstEntity& entity) noexcept {
+  *os << "foreign import ccall \"" << entity.first << "\" ";
+  genEntityRaw(entity.first, entity.second);
 }
 
 void ffi::HaskellCodeGen::genFuncName(const std::string& name) noexcept {
@@ -160,6 +165,18 @@ void ffi::HaskellCodeGen::genStruct(const std::string& name,
                                     const Structure& str) noexcept {
   *os << "data ";
   genTypeName(name);
+  *os << " = ";
+  genConstName(name);
+  if (!str.fields.empty()) {
+    *os << "\n  { ";
+    auto f = begin(str.fields);
+    while (true) {
+      genEntityRaw(f->first, f->second);
+      if (++f == end(str.fields)) break;
+      *os << "  , ";
+    }
+    *os << "  }";
+  }
   *os << "\n\n";
 }
 

@@ -7,11 +7,13 @@
 #include "Types.h"
 
 namespace ffi {
-struct Structure {};
+struct Structure {
+  std::vector<Entity> fields;
+};
 
 struct Enumeration {
   Type underlying_type;
-  std::vector<std::pair<std::string, intmax_t>> values;
+  std::map<std::string, intmax_t> values;
 };
 
 struct Tag {

@@ -66,6 +66,48 @@ struct llvm::yaml::MappingTraits<ffi::Type> {
 };
 
 template <>
+struct llvm::yaml::MappingTraits<ffi::Structure> {
+  static void mapping(IO& io, ffi::Structure& tag) {
+    io.mapRequired("fields", tag.fields);
+  }
+};
+
+template <>
+struct llvm::yaml::CustomMappingTraits<ffi::Enumeration> {
+  static void inputOne(IO& io, StringRef key, ffi::Enumeration& enm) {
+    auto kstr = key.str();
+    int value = 0;
+    io.mapRequired(kstr.c_str(), value);
+    enm.values.try_emplace(kstr, value);
+  }
+
+  static void output(IO& io, ffi::Enumeration& enm) {
+    for (auto& [k, v] : enm.values) io.mapRequired(k.c_str(), v);
+  }
+};
+
+template <>
+struct llvm::yaml::MappingTraits<ffi::Tag> {
+  using vtype = decltype(std::declval<ffi::Tag>().payload);
+  template <typename T>
+  static constexpr ptrdiff_t Index = ffi::index<vtype, T>;
+
+  static void mapping(IO& io, ffi::Tag& tag) {
+    const auto idx = tag.payload.index();
+
+    if (io.mapTag("Structure", idx == Index<ffi::Structure>)) {
+      if (!io.outputting()) tag.payload.emplace<ffi::Structure>();
+      auto& clause = std::get<ffi::Structure>(tag.payload);
+      MappingTraits<ffi::Structure>::mapping(io, clause);
+    } else if (io.mapTag("Enumeration", idx == Index<ffi::Enumeration>)) {
+      if (!io.outputting()) tag.payload.emplace<ffi::Enumeration>();
+      auto& clause = std::get<ffi::Enumeration>(tag.payload);
+      io.mapRequired("enumerators", clause);
+    }
+  }
+};
+
+template <>
 struct llvm::yaml::MappingTraits<ffi::Entity> {
   static void mapping(IO& io, ffi::Entity& entity) {
     io.mapRequired("name", entity.first);
@@ -78,6 +120,7 @@ template <>
 struct llvm::yaml::MappingTraits<ffi::ModuleContents> {
   static void mapping(IO& io, ffi::ModuleContents& mod) {
     io.mapRequired("entities", mod.entities);
+    io.mapRequired("tags", mod.tags);
     io.mapRequired("imports", mod.imports);
   }
 };
@@ -158,19 +201,5 @@ struct llvm::yaml::MappingTraits<config::Config> {
     cfg.ConstMarshaller.forward_marshaller = &cfg.Marshaller;
     cfg.VarMarshaller.forward_marshaller = &cfg.Marshaller;
     return StringRef{};
-  }
-};
-
-template <>
-struct llvm::yaml::CustomMappingTraits<ffi::Enumeration> {
-  static void inputOne(IO& io, StringRef key, ffi::Enumeration& enm) {
-    auto kstr = key.str();
-    int value = 0;
-    io.mapRequired(kstr.c_str(), value);
-    enm.values.emplace_back(kstr, value);
-  }
-
-  static void output(IO& io, ffi::Enumeration& enm) {
-    for (auto& [k, v] : enm.values) io.mapRequired(k.c_str(), v);
   }
 };
