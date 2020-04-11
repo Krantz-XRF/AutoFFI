@@ -7,7 +7,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 project("AutoFFI")
 
 include(FindLua)
-find_package(lua REQUIRED)
+# lua integration is planned
+# find_package(lua REQUIRED)
 find_package(LLVM REQUIRED)
 find_package(Clang REQUIRED)
 # Use this fmt library in place of C++20 std::format
