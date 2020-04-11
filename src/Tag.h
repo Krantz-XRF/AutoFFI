@@ -15,7 +15,6 @@ struct Enumeration {
 };
 
 struct Tag {
-  uintptr_t unique_id;
   std::variant<Structure, Enumeration> payload;
 };
 

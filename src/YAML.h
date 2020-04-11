@@ -69,7 +69,6 @@ struct llvm::yaml::MappingTraits<ffi::Type> {
 template <>
 struct llvm::yaml::MappingTraits<ffi::Entity> {
   static void mapping(IO& io, ffi::Entity& entity) {
-    io.mapRequired("uid", entity.unique_id);
     io.mapRequired("name", entity.name);
     io.mapRequired("type", entity.type);
   }

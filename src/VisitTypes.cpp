@@ -3,13 +3,6 @@
 #include "Entity.h"
 
 namespace {
-#define TYPE(TypeName)                                              \
-  std::optional<ffi::Type> cast(std::optional<ffi::TypeName>&& x) { \
-    if (x.has_value()) return ffi::Type{std::move(x.value())};      \
-    return std::nullopt;                                            \
-  }
-#include "Types.def"
-
 constexpr uintptr_t invalid_id = 0;
 
 template <typename T>
@@ -132,8 +125,9 @@ std::optional<ffi::Type> ffi::Visitor::matchType(
           "declaration for entity '%0' is ignored, type '%2' is an "
           "OpenCL type, a platform extension, or a clang extension.");
       diags.Report(decl.getLocation(), id) << decl.getName() << name_of(k);
+      return std::nullopt;
     }
-    return cast(std::move(tk));
+    return Type{std::move(tk.value())};
   } else if (auto pointerType = type.getAs<clang::PointerType>()) {
     auto pointee = pointerType->getPointeeType();
     auto tk = matchType(decl, *pointee.getTypePtr());
@@ -153,7 +147,7 @@ std::optional<ffi::Type> ffi::Visitor::matchType(
     if (!tk.has_value()) {
       const auto id =
           diags.getCustomDiagID(clang::DiagnosticsEngine::Note,
-                                "in typedef declaration for type alias '%0':");
+                                "in typedef declaration for type alias '%0'.");
       diags.Report(typeDecl->getLocation(), id) << typeDecl->getName();
       return std::nullopt;
     }
@@ -196,7 +190,7 @@ std::optional<ffi::Type> ffi::Visitor::matchType(
     if (!retType.has_value()) {
       const auto id = diags.getCustomDiagID(
           clang::DiagnosticsEngine::Note,
-          "in declaration for return type of function '%0':");
+          "in declaration for return type of function '%0'.");
       diags.Report(decl.getLocation(), id) << decl.getName();
       return std::nullopt;
     }
@@ -209,11 +203,11 @@ std::optional<ffi::Type> ffi::Visitor::matchType(
       if (!paramType.has_value()) {
         const auto id = diags.getCustomDiagID(
             clang::DiagnosticsEngine::Note,
-            "in declaration for parameter type %1 of function '%0':");
+            "in declaration for parameter type %1 of function '%0'.");
         diags.Report(decl.getLocation(), id) << decl.getName() << i;
         return std::nullopt;
       }
-      func.params.push_back({invalid_id, "", std::move(paramType.value())});
+      func.params.push_back({"", std::move(paramType.value())});
     }
 
     return Type{std::move(func)};
@@ -240,7 +234,7 @@ std::optional<ffi::Entity> ffi::Visitor::matchVarRaw(
     diags.Report(decl.getLocation(), id);
     return std::nullopt;
   }
-  return Entity{getUniqueID(decl), decl.getName(), std::move(type.value())};
+  return Entity{decl.getName(), std::move(type.value())};
 }
 
 std::optional<ffi::Entity> ffi::Visitor::matchVar(
@@ -249,7 +243,7 @@ std::optional<ffi::Entity> ffi::Visitor::matchVar(
   if (!res.has_value()) {
     auto& diags = context.getDiagnostics();
     const auto id = diags.getCustomDiagID(clang::DiagnosticsEngine::Note,
-                                          "in declaration for variable '%0':");
+                                          "in declaration for variable '%0'.");
     diags.Report(decl.getLocation(), id) << decl.getName();
   }
   return res;
@@ -277,7 +271,7 @@ std::optional<ffi::Entity> ffi::Visitor::matchFunction(
     func.params.push_back(std::move(var.value()));
   }
 
-  return Entity{getUniqueID(decl), std::move(name), std::move(func)};
+  return Entity{std::move(name), std::move(func)};
 }
 
 std::optional<ffi::TagDecl> ffi::Visitor::matchEnum(
@@ -314,7 +308,7 @@ std::optional<ffi::TagDecl> ffi::Visitor::matchEnum(
     enm.values.emplace_back(std::move(itemName), initVal);
   }
 
-  return TagDecl{name, Tag{getUniqueID(decl), std::move(enm)}};
+  return TagDecl{name, Tag{std::move(enm)}};
 }
 
 std::optional<ffi::TagDecl> ffi::Visitor::matchStruct(
@@ -333,7 +327,7 @@ std::optional<ffi::TagDecl> ffi::Visitor::matchStruct(
     name = defName;
   }
 
-  return TagDecl{name, Tag{getUniqueID(decl), Structure{}}};
+  return TagDecl{name, Tag{Structure{}}};
 }
 
 std::optional<ffi::TagDecl> ffi::Visitor::matchTypedef(
@@ -353,7 +347,7 @@ std::optional<ffi::Entity> ffi::Visitor::matchParam(
   auto res = matchVarRaw(param);
   if (!res.has_value()) {
     const auto id = diags.getCustomDiagID(clang::DiagnosticsEngine::Note,
-                                          "in declaration for parameter '%0':");
+                                          "in declaration for parameter '%0'.");
     diags.Report(param.getLocation(), id)
         << param.getName() << param.getSourceRange();
   }
