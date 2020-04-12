@@ -39,7 +39,7 @@ std::optional<ffi::ScalarType> ffi::ScalarType::from_clang(
       return ScalarType{signedness, Char, WidthNone};
     case K::WChar_U:
     case K::WChar_S:
-      return ScalarType{None, WChar, WidthNone};
+      return ScalarType{None, Wchar, WidthNone};
     case K::Char8:
       return ScalarType{Unsigned, UniChar, Width8};
     case K::Char16:
