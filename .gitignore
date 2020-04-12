@@ -1,6 +1,10 @@
+# Visual Studio
 .vs/
 out/
+CMakeSettings.json
+# Visual Studio Code
 .vscode/
 build/
 test/
-CMakeSettings.json
+# Generated Slides PDF
+slides/*.pdf
