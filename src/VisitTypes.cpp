@@ -116,31 +116,7 @@ std::optional<ffi::Type> ffi::Visitor::matchType(
     const clang::NamedDecl& decl, const clang::Type& type) const {
   auto& sm = context.getSourceManager();
   auto& diags = context.getDiagnostics();
-  if (auto builtinType = type.getAs<clang::BuiltinType>()) {
-    const auto k = builtinType->getKind();
-    auto tk = ScalarType::from_clang(k);
-    if (!tk.has_value()) {
-      const auto id = diags.getCustomDiagID(
-          clang::DiagnosticsEngine::Warning,
-          "declaration for entity '%0' is ignored, type '%2' is an "
-          "OpenCL type, a platform extension, or a clang extension.");
-      diags.Report(decl.getLocation(), id) << decl.getName() << name_of(k);
-      return std::nullopt;
-    }
-    return Type{std::move(tk.value())};
-  } else if (auto pointerType = type.getAs<clang::PointerType>()) {
-    auto pointee = pointerType->getPointeeType();
-    auto tk = matchType(decl, *pointee.getTypePtr());
-    if (!tk.has_value()) return std::nullopt;
-    return Type{PointerType{std::make_unique<Type>(std::move(tk.value()))}};
-  } else if (auto refType = type.getAs<clang::ReferenceType>()) {
-    const auto id = diags.getCustomDiagID(
-        clang::DiagnosticsEngine::Warning,
-        "declaration for entity '%0' involving C++ reference is ignored, "
-        "because C++ references (lvalue, rvalue) are not supported.");
-    diags.Report(decl.getLocation(), id) << decl.getName();
-    return std::nullopt;
-  } else if (auto typedefType = type.getAs<clang::TypedefType>()) {
+  if (auto typedefType = type.getAs<clang::TypedefType>()) {
     auto typeDecl = typedefType->getDecl();
     auto qualType = typeDecl->getUnderlyingType();
     auto tk = matchType(*typeDecl, *qualType.getTypePtr());
@@ -164,6 +140,30 @@ std::optional<ffi::Type> ffi::Visitor::matchType(
       if (opaque.name.empty()) opaque.name = name;
     }
     return tk;
+  } else if (auto builtinType = type.getAs<clang::BuiltinType>()) {
+    const auto k = builtinType->getKind();
+    auto tk = ScalarType::from_clang(k);
+    if (!tk.has_value()) {
+      const auto id = diags.getCustomDiagID(
+          clang::DiagnosticsEngine::Warning,
+          "declaration for entity '%0' is ignored, type '%2' is an "
+          "OpenCL type, a platform extension, or a clang extension.");
+      diags.Report(decl.getLocation(), id) << decl.getName() << name_of(k);
+      return std::nullopt;
+    }
+    return Type{std::move(tk.value())};
+  } else if (auto pointerType = type.getAs<clang::PointerType>()) {
+    auto pointee = pointerType->getPointeeType();
+    auto tk = matchType(decl, *pointee.getTypePtr());
+    if (!tk.has_value()) return std::nullopt;
+    return Type{PointerType{std::make_unique<Type>(std::move(tk.value()))}};
+  } else if (auto refType = type.getAs<clang::ReferenceType>()) {
+    const auto id = diags.getCustomDiagID(
+        clang::DiagnosticsEngine::Warning,
+        "declaration for entity '%0' involving C++ reference is ignored, "
+        "because C++ references (lvalue, rvalue) are not supported.");
+    diags.Report(decl.getLocation(), id) << decl.getName();
+    return std::nullopt;
   } else if (auto templType = type.getAs<clang::TemplateSpecializationType>()) {
     auto templName = templType->getTemplateName();
     std::string typeName;
