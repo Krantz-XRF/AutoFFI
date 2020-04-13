@@ -147,33 +147,33 @@ According to Haskell report, we have the following correspondance:
 
 ## Haskell FFI Specification Cont'd
 
-The GHC extension for FFI adds:
+Additionally, these FFI types are available in `Foreign.C.Types`:
 
 `\tiny`{=latex}
 
-| C symbol     | Haskell symbol       | Remarks                                    |
-| ------------ | -------------------- | ------------------------------------------ |
-| `CSChar`     | `signed char`        |                                            |
-| `CUChar`     | `unsigned char`      |                                            |
-| `CWchar`     | `wchar_t`            | Currently only work correctly in C++ mode. |
-| `CShort`     | `short`              |                                            |
-| `CUShort`    | `unsigned short`     |                                            |
-| `CUInt`      | `unsigned int`       |                                            |
-| `CLong`      | `long`               |                                            |
-| `CULong`     | `unsigned long`      |                                            |
-| `CPtrdiff`   | `ptrdiff_t`          | Not supported yet.                         |
-| `CSize`      | `size_t`             | Not supported yet.                         |
-| `CSigAtomic` | `sig_atomic_t`       | Support not planned.                       |
-| `CLLong`     | `long long`          |                                            |
-| `CULLong`    | `unsigned long long` |                                            |
-| `CIntPtr`    | `intptr_t`           | Falls back to 64 bit integers.             |
-| `CUIntPtr`   | `uintptr_t`          | Falls back to 64 bit integers.             |
-| `CIntMax`    | `intmax_t`           | Falls back to 64 bit integers.             |
-| `CUIntMax`   | `uintmax_t`          | Falls back to 64 bit integers.             |
-| `CClock`     | `clock_t`            | Support not planned.                       |
-| `CTime`      | `time_t`             | Support not planned.                       |
-| `CUSeconds`  | `useconds_t`         | Support not planned.                       |
-| `CSUSeconds` | `suseconds_t`        | Support not planned.                       |
+| Haskell symbol | C symbol             | Remarks            |
+| -------------- | -------------------- | ------------------ |
+| `CSChar`       | `signed char`        |                    |
+| `CUChar`       | `unsigned char`      |                    |
+| `CWchar`       | `wchar_t`            |                    |
+| `CShort`       | `short`              |                    |
+| `CUShort`      | `unsigned short`     |                    |
+| `CUInt`        | `unsigned int`       |                    |
+| `CLong`        | `long`               |                    |
+| `CULong`       | `unsigned long`      |                    |
+| `CPtrdiff`     | `ptrdiff_t`          |                    |
+| `CSize`        | `size_t`             |                    |
+| `CSigAtomic`   | `sig_atomic_t`       | Not supported yet. |
+| `CLLong`       | `long long`          |                    |
+| `CULLong`      | `unsigned long long` |                    |
+| `CIntPtr`      | `intptr_t`           |                    |
+| `CUIntPtr`     | `uintptr_t`          |                    |
+| `CIntMax`      | `intmax_t`           |                    |
+| `CUIntMax`     | `uintmax_t`          |                    |
+| `CClock`       | `clock_t`            | Not supported yet. |
+| `CTime`        | `time_t`             | Not supported yet. |
+| `CUSeconds`    | `useconds_t`         | Not supported yet. |
+| `CSUSeconds`   | `suseconds_t`        | Not supported yet. |
 
 # Project Structure
 
