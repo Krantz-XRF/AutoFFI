@@ -1,5 +1,7 @@
 # auto-FFI
 
+[![Build Status](https://travis-ci.org/Krantz-XRF/auto-FFI.svg?branch=master)](https://travis-ci.org/Krantz-XRF/auto-FFI)
+
 ## Overview
 
 A tool to generate Haskell FFI binding for C/C++ API.
