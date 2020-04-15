@@ -16,8 +16,7 @@ add_subdirectory(lava)
 add_executable(AutoFFI)
 add_subdirectory(src)
 
-target_include_directories(AutoFFI SYSTEM PRIVATE
-  "${LLVM_DIR}/../../../include")
-target_link_directories(AutoFFI PRIVATE "${LLVM_DIR}/../../../lib")
+target_include_directories(AutoFFI SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS})
+target_link_directories(AutoFFI PRIVATE ${LLVM_LIBRARY_DIRS})
 target_link_libraries(AutoFFI PRIVATE lava-assert
   clangTooling clangBasic clangASTMatchers fmt::fmt)
