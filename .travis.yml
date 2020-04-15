@@ -8,20 +8,31 @@ addons:
       - ubuntu-toolchain-r-test
     packages:
       - g++-9
-      - libfmt-dev
 env:
   global:
     - CC=gcc-9
     - CXX=g++-9
 
 install:
+  # Remove LLVM/Clang 7
+  - sudo apt-get -y remove llvm llvm-runtime
+  - sudo rm -rf /usr/local/clang-7.0.0
+  # Add CMake Repo
   - sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 291F9FF6FD385783
   - sudo apt-add-repository -y 'deb https://apt.kitware.com/ubuntu/ bionic main'
+  # Add LLVM/Clang Repo
+  - wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+  - sudo add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-9 main"
   - sudo apt-get -q update
+  # Install CMake/LLVM/Clang
   - sudo apt-get -y --allow-unauthenticated install cmake
-  - sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
+  - sudo apt-get install -y clang-9 libclang-9-dev llvm-9 llvm-9-dev
+  # Install libfmt 6.2.0
+  - git clone -b 6.2.0 --depth 1 git://github.com/fmtlib/fmt.git
+  - cd fmt && mkdir build && cd build
+  - cmake -DFMT_TEST=OFF -DFMT_DOC=OFF .. && sudo make install && cd ../..
 
 script:
   - mkdir build && cd build
-  - /usr/bin/cmake ..
+  - /usr/bin/cmake -DCMAKE_PREFIX_PATH=/usr/lib/llvm-9 ..
   - make

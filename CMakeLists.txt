@@ -7,9 +7,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 project("AutoFFI")
 
 find_package(LLVM REQUIRED)
+message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+message(STATUS "Using LLVMConfig.cmake in ${LLVM_DIR}")
 find_package(Clang REQUIRED)
+message(STATUS "Using ClangConfig.cmake in ${Clang_DIR}")
 # Use this fmt library in place of C++20 std::format
-find_package(fmt REQUIRED)
+find_package(fmt 6 REQUIRED)
 
 add_subdirectory(lava)
 
