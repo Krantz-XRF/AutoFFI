@@ -1,6 +1,10 @@
 # auto-FFI
 
+[![language](https://img.shields.io/badge/C%2B%2B-17-blue)](https://en.wikipedia.org/wiki/C%2B%2B#Standardization)
 [![Build Status](https://travis-ci.org/Krantz-XRF/auto-FFI.svg?branch=master)](https://travis-ci.org/Krantz-XRF/auto-FFI)
+[![license](https://img.shields.io/badge/license-AGPL--v3.0-blueviolet)](https://www.gnu.org/licenses/agpl-3.0.html)
+
+auto-FFI is licensed under the GNU Affero General Public License v3.0.
 
 ## Overview
 
