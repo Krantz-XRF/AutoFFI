@@ -23,7 +23,7 @@
 #include <string_view>
 
 namespace ffi {
-struct Marshaller {
+struct marshaller {
   enum Case {
     Case_snake_case,
     Case_Snake_case,
@@ -49,12 +49,12 @@ struct Marshaller {
   std::string remove_suffix;
   std::string add_prefix;
   std::string add_suffix;
-  Marshaller* forward_marshaller{nullptr};
+  marshaller* forward_marshaller{nullptr};
   bool afterward{false};
 
   std::string transform_raw(std::string_view) const;
   std::string transform(std::string_view) const;
 };
 
-using MarshallerMap = std::map<std::string, Marshaller>;
+using marshaller_map = std::map<std::string, marshaller>;
 }  // namespace ffi

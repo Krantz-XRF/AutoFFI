@@ -25,30 +25,28 @@
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/InitLLVM.h>
 
-#include <lava/assert.h>
-
 #include <fmt/format.h>
 
-#include "Config.h"
-#include "Driver.h"
-#include "HaskellCodeGen.h"
-#include "YAML.h"
+#include "config.h"
+#include "driver.h"
+#include "haskell_code_gen.h"
+#include "yaml.h"
 
 namespace tool = clang::tooling;
 namespace cl = llvm::cl;
 
 namespace {
 cl::OptionCategory category{"auto-FFI Options"};
-cl::opt<bool> Help{"h", cl::desc{"Alias for -help"}, cl::Hidden};
-cl::opt<bool> DumpConfig{
+cl::opt<bool> help{"h", cl::desc{"Alias for -help"}, cl::Hidden};
+cl::opt<bool> dump_config{
     "dump-config", cl::desc{"Dump configuration options to stdout and exit."},
     cl::cat{category}};
-cl::opt<bool> Yaml{"yaml", cl::desc{"Dump YAML for entities."},
+cl::opt<bool> yaml{"yaml", cl::desc{"Dump YAML for entities."},
                    cl::cat{category}};
-cl::opt<bool> Verbose{"verbose", cl::desc{"Print verbose output message."},
+cl::opt<bool> verbose{"verbose", cl::desc{"Print verbose output message."},
                       cl::cat{category}};
-cl::list<std::string> ConfigFiles{cl::Positional, cl::desc{"[<file> ...]"},
-                                  cl::cat{category}};
+cl::list<std::string> config_files{cl::Positional, cl::desc{"[<file> ...]"},
+                                   cl::cat{category}};
 const char version[]{
     "auto-FFI 2020\n"
     "Copyright (C) 2020 Xie Ruifeng.\n"
@@ -58,7 +56,7 @@ const char version[]{
 
 int main(int argc, const char* argv[]) {
   // LLVM initialization
-  llvm::InitLLVM X(argc, argv);
+  llvm::InitLLVM init_llvm(argc, argv);
   cl::HideUnrelatedOptions(category);
 
   // auto-FFI options
@@ -71,33 +69,33 @@ int main(int argc, const char* argv[]) {
       "<https://github.com/Krantz-XRF/auto-FFI>.\n");
 
   // Help message
-  if (Help) {
+  if (help) {
     cl::PrintHelpMessage();
     return 0;
   }
 
-  ffi::FFIDriver driver;
+  ffi::ffi_driver driver;
 
   // Configurations
-  if (DumpConfig) {
+  if (dump_config) {
     llvm::yaml::Output output{llvm::outs()};
     output << driver.cfg;
     return 0;
   }
 
   // No input, print help and exit
-  if (ConfigFiles.empty()) {
+  if (config_files.empty()) {
     cl::PrintHelpMessage();
     return 0;
   }
 
   // Run on config files
-  for (const auto& cfgFile : ConfigFiles) {
-    auto contents = llvm::MemoryBuffer::getFile(cfgFile);
+  for (const auto& cfg_file : config_files) {
+    auto contents = llvm::MemoryBuffer::getFile(cfg_file);
     if (auto ec = contents.getError()) {
       llvm::errs() << format(
-          FMT_STRING("Failed to load configuration file \"{}\": {}\n"), cfgFile,
-          ec.message());
+          FMT_STRING("Failed to load configuration file \"{}\": {}\n"),
+          cfg_file, ec.message());
       continue;
     }
     llvm::yaml::Input input{contents.get()->getBuffer()};
@@ -105,8 +103,8 @@ int main(int argc, const char* argv[]) {
     if (input.error()) continue;
 
     // Load CWD
-    llvm::SmallString<128> currentPath;
-    llvm::sys::fs::current_path(currentPath);
+    llvm::SmallString<128> current_path;
+    llvm::sys::fs::current_path(current_path);
     if (!driver.cfg.RootDirectory.empty())
       llvm::sys::fs::set_current_path(driver.cfg.RootDirectory);
 
@@ -119,16 +117,16 @@ int main(int argc, const char* argv[]) {
 
     if (const auto status = tool.run(&driver)) return status;
 
-    if (Yaml) {
+    if (yaml) {
       llvm::yaml::Output output{llvm::outs()};
       output << driver.modules;
     }
 
-    ffi::HaskellCodeGen codeGen{driver.cfg};
-    for (auto& [name, mod] : driver.modules) codeGen.genModule(name, mod);
+    ffi::haskell_code_gen code_gen{driver.cfg};
+    for (auto& [name, mod] : driver.modules) code_gen.gen_module(name, mod);
 
     // Recover CWD
-    llvm::sys::fs::set_current_path(currentPath);
+    llvm::sys::fs::set_current_path(current_path);
   }
 
   return 0;

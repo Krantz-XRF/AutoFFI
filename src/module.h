@@ -17,11 +17,19 @@
 
 #pragma once
 
-#include <memory>
+#include <map>
+#include <string>
+#include <vector>
+
+#include "tag_type.h"
+#include "types.h"
 
 namespace ffi {
-struct Type;
-struct PointerType {
-  std::unique_ptr<Type> pointee;
+struct ModuleContents {
+  std::map<std::string, c_type> entities;
+  std::map<std::string, tag_type> tags;
+  std::vector<std::string> imports;
 };
+
+using module = std::pair<std::string, ModuleContents>;
 }  // namespace ffi

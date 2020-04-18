@@ -15,9 +15,27 @@
  * along with auto-FFI.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Types.h"
+#pragma once
 
-bool ffi::is_marshallable(const Type& type) noexcept {
-  return std::holds_alternative<ScalarType>(type.value) ||
-         std::holds_alternative<PointerType>(type.value);
-}
+#include <string>
+#include <variant>
+#include <vector>
+
+#include "types.h"
+
+namespace ffi {
+struct Structure {
+  std::vector<entity> fields;
+};
+
+struct Enumeration {
+  c_type underlying_type;
+  std::map<std::string, intmax_t> values;
+};
+
+struct tag_type {
+  std::variant<Structure, Enumeration> payload;
+};
+
+using tag_decl = std::pair<std::string, tag_type>;
+}  // namespace ffi

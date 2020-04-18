@@ -1,6 +1,0 @@
-TYPE(ScalarType)
-TYPE(OpaqueType)
-TYPE(FunctionType)
-TYPE(PointerType)
-
-#undef TYPE

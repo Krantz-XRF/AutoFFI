@@ -15,7 +15,7 @@
  * along with auto-FFI.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "VisitTypes.h"
+#include "visit_types.h"
 
 namespace {
 constexpr uintptr_t invalid_id = 0;
@@ -45,7 +45,7 @@ inline uintptr_t getUniqueID(const clang::Decl& decl) {
 }
 }  // namespace
 
-bool ffi::Visitor::checkDecl(const clang::Decl* decl) const {
+bool ffi::ast_visitor::check_decl(const clang::Decl* decl) const {
   if (!decl) return false;
   if (auto ndecl = llvm::dyn_cast<clang::NamedDecl>(decl);
       ndecl && !ndecl->hasExternalFormalLinkage()) {
@@ -66,7 +66,7 @@ bool ffi::Visitor::checkDecl(const clang::Decl* decl) const {
   return sm.isInMainFile(ExpansionLoc);
 }
 
-bool ffi::Visitor::checkExternC(const clang::Decl& decl) const {
+bool ffi::ast_visitor::check_extern_c(const clang::Decl& decl) const {
   using K = clang::Decl::Kind;
   const bool isDeclExternC = [&decl] {
     if (const auto k = decl.getKind(); k == K::Var)
@@ -88,55 +88,55 @@ bool ffi::Visitor::checkExternC(const clang::Decl& decl) const {
   return isDeclExternC;
 }
 
-void ffi::Visitor::matchTranslationUnit(const clang::TranslationUnitDecl& decl,
-                                        ModuleContents& mod) const {
+void ffi::ast_visitor::match_translation_unit(
+    const clang::TranslationUnitDecl& decl, ModuleContents& mod) const {
   for (auto d : decl.decls()) {
-    if (!checkDecl(d)) continue;
-    if (auto entity = matchEntity(*d); entity.has_value())
+    if (!check_decl(d)) continue;
+    if (auto entity = match_entity(*d); entity.has_value())
       mod.entities.try_emplace(std::move(entity->first),
                                std::move(entity->second));
-    else if (auto tag = matchTag(*d); tag.has_value())
+    else if (auto tag = match_tag(*d); tag.has_value())
       mod.tags.emplace(std::move(tag.value()));
   }
 }
 
-std::optional<ffi::Entity> ffi::Visitor::matchEntity(
+std::optional<ffi::entity> ffi::ast_visitor::match_entity(
     const clang::Decl& decl) const {
   using K = clang::Decl::Kind;
   switch (decl.getKind()) {
     case K::Var:
-      return matchVar(static_cast<const clang::VarDecl&>(decl));
+      return match_var(static_cast<const clang::VarDecl&>(decl));
     case K::Function:
-      return matchFunction(static_cast<const clang::FunctionDecl&>(decl));
+      return match_function(static_cast<const clang::FunctionDecl&>(decl));
     default:
       return std::nullopt;
   }
 }
 
-std::optional<ffi::TagDecl> ffi::Visitor::matchTag(
+std::optional<ffi::tag_decl> ffi::ast_visitor::match_tag(
     const clang::Decl& decl) const {
   using K = clang::Decl::Kind;
   switch (decl.getKind()) {
     case K::Enum:
-      return matchEnum(static_cast<const clang::EnumDecl&>(decl));
+      return match_enum(static_cast<const clang::EnumDecl&>(decl));
     case K::Record:
     case K::CXXRecord:
-      return matchStruct(static_cast<const clang::RecordDecl&>(decl));
+      return match_struct(static_cast<const clang::RecordDecl&>(decl));
     case K::Typedef:
-      return matchTypedef(static_cast<const clang::TypedefNameDecl&>(decl));
+      return match_typedef(static_cast<const clang::TypedefNameDecl&>(decl));
     default:
       return std::nullopt;
   }
 }
 
-std::optional<ffi::Type> ffi::Visitor::matchType(
+std::optional<ffi::c_type> ffi::ast_visitor::match_type(
     const clang::NamedDecl& decl, const clang::Type& type) const {
   auto& sm = context.getSourceManager();
   auto& diags = context.getDiagnostics();
   if (auto typedefType = type.getAs<clang::TypedefType>()) {
     auto typeDecl = typedefType->getDecl();
     auto qualType = typeDecl->getUnderlyingType();
-    auto tk = matchType(*typeDecl, *qualType.getTypePtr());
+    auto tk = match_type(*typeDecl, *qualType.getTypePtr());
     if (!tk.has_value()) {
       const auto id =
           diags.getCustomDiagID(clang::DiagnosticsEngine::Note,
@@ -145,21 +145,21 @@ std::optional<ffi::Type> ffi::Visitor::matchType(
       return std::nullopt;
     }
     auto& resVal = tk.value().value;
-    if (std::holds_alternative<ScalarType>(resVal)) {
+    if (std::holds_alternative<scalar_type>(resVal)) {
       auto name = typeDecl->getName().str();
       if (sm.isInSystemHeader(typeDecl->getLocation()) ||
           cfg.AllowCustomFixedSizeInt)
-        if (auto tn = ScalarType::from_name(name); tn.has_value())
+        if (auto tn = scalar_type::from_name(name); tn.has_value())
           tk = {tn.value()};
-    } else if (std::holds_alternative<OpaqueType>(resVal)) {
+    } else if (std::holds_alternative<opaque_type>(resVal)) {
       auto name = typeDecl->getQualifiedNameAsString();
-      auto& opaque = std::get<OpaqueType>(resVal);
+      auto& opaque = std::get<opaque_type>(resVal);
       if (opaque.name.empty()) opaque.name = name;
     }
     return tk;
   } else if (auto builtinType = type.getAs<clang::BuiltinType>()) {
     const auto k = builtinType->getKind();
-    auto tk = ScalarType::from_clang(k);
+    auto tk = scalar_type::from_clang(k);
     if (!tk.has_value()) {
       const auto id = diags.getCustomDiagID(
           clang::DiagnosticsEngine::Warning,
@@ -168,12 +168,13 @@ std::optional<ffi::Type> ffi::Visitor::matchType(
       diags.Report(decl.getLocation(), id) << decl.getName() << name_of(k);
       return std::nullopt;
     }
-    return Type{std::move(tk.value())};
+    return c_type{std::move(tk.value())};
   } else if (auto pointerType = type.getAs<clang::PointerType>()) {
     auto pointee = pointerType->getPointeeType();
-    auto tk = matchType(decl, *pointee.getTypePtr());
+    auto tk = match_type(decl, *pointee.getTypePtr());
     if (!tk.has_value()) return std::nullopt;
-    return Type{PointerType{std::make_unique<Type>(std::move(tk.value()))}};
+    return c_type{
+        pointer_type{std::make_unique<c_type>(std::move(tk.value()))}};
   } else if (auto refType = type.getAs<clang::ReferenceType>()) {
     const auto id = diags.getCustomDiagID(
         clang::DiagnosticsEngine::Warning,
@@ -186,48 +187,48 @@ std::optional<ffi::Type> ffi::Visitor::matchType(
     std::string typeName;
     llvm::raw_string_ostream os{typeName};
     templName.print(os, context.getPrintingPolicy());
-    return Type{OpaqueType{typeName}};
+    return c_type{opaque_type{typeName}};
   } else if (auto tagType = type.getAs<clang::TagType>()) {
     auto tagDecl = tagType->getDecl();
     auto tagName = tagDecl->getName();
-    return Type{OpaqueType{tagName}};
+    return c_type{opaque_type{tagName}};
   } else if (auto funcType = type.getAs<clang::FunctionProtoType>()) {
     if (funcType->getCallConv() != clang::CC_C) {
       const auto id = diags.getCustomDiagID(
           clang::DiagnosticsEngine::Warning,
-          "declaration for function pointer '%0' is ignored, because it "
+          "declaration for match_function pointer '%0' is ignored, because it "
           "does not have a C calling convention.");
       diags.Report(decl.getLocation(), id) << decl.getName();
       return std::nullopt;
     }
 
-    FunctionType func;
+    function_type func;
 
-    auto retType = matchType(decl, *funcType->getReturnType().getTypePtr());
+    auto retType = match_type(decl, *funcType->getReturnType().getTypePtr());
     if (!retType.has_value()) {
       const auto id = diags.getCustomDiagID(
           clang::DiagnosticsEngine::Note,
-          "in declaration for return type of function '%0'.");
+          "in declaration for return type of match_function '%0'.");
       diags.Report(decl.getLocation(), id) << decl.getName();
       return std::nullopt;
     }
-    func.returnType = std::make_unique<Type>(std::move(retType.value()));
+    func.return_type = std::make_unique<c_type>(std::move(retType.value()));
 
     auto paramCount = funcType->getNumParams();
     for (auto i = 0; i < paramCount; ++i) {
       auto param = funcType->getParamType(i);
-      auto paramType = matchType(decl, *param.getTypePtr());
+      auto paramType = match_type(decl, *param.getTypePtr());
       if (!paramType.has_value()) {
         const auto id = diags.getCustomDiagID(
             clang::DiagnosticsEngine::Note,
-            "in declaration for parameter type %1 of function '%0'.");
+            "in declaration for parameter type %1 of match_function '%0'.");
         diags.Report(decl.getLocation(), id) << decl.getName() << i;
         return std::nullopt;
       }
       func.params.push_back({"", std::move(paramType.value())});
     }
 
-    return Type{std::move(func)};
+    return c_type{std::move(func)};
   } else {
     const auto id = diags.getCustomDiagID(
         clang::DiagnosticsEngine::Warning,
@@ -238,9 +239,9 @@ std::optional<ffi::Type> ffi::Visitor::matchType(
   }
 }
 
-std::optional<ffi::Entity> ffi::Visitor::matchVarRaw(
+std::optional<ffi::entity> ffi::ast_visitor::match_var_raw(
     const clang::VarDecl& decl) const {
-  auto type = matchType(decl, *decl.getType().getTypePtr());
+  auto type = match_type(decl, *decl.getType().getTypePtr());
   if (!type.has_value()) return std::nullopt;
   if (!is_marshallable(type.value())) {
     auto& diags = context.getDiagnostics();
@@ -251,12 +252,12 @@ std::optional<ffi::Entity> ffi::Visitor::matchVarRaw(
     diags.Report(decl.getLocation(), id);
     return std::nullopt;
   }
-  return Entity{decl.getName(), std::move(type.value())};
+  return entity{decl.getName(), std::move(type.value())};
 }
 
-std::optional<ffi::Entity> ffi::Visitor::matchVar(
+std::optional<ffi::entity> ffi::ast_visitor::match_var(
     const clang::VarDecl& decl) const {
-  auto res = matchVarRaw(decl);
+  auto res = match_var_raw(decl);
   if (!res.has_value()) {
     auto& diags = context.getDiagnostics();
     const auto id = diags.getCustomDiagID(clang::DiagnosticsEngine::Note,
@@ -266,32 +267,32 @@ std::optional<ffi::Entity> ffi::Visitor::matchVar(
   return res;
 }
 
-std::optional<ffi::Entity> ffi::Visitor::matchFunction(
+std::optional<ffi::entity> ffi::ast_visitor::match_function(
     const clang::FunctionDecl& decl) const {
   auto& diags = context.getDiagnostics();
   auto name = decl.getName();
   const auto reportNote = [&diags, &decl, &name] {
     const auto noteId = diags.getCustomDiagID(
         clang::DiagnosticsEngine::Note,
-        "declaration for function '%0' is therefore ignored.");
+        "declaration for match_function '%0' is therefore ignored.");
     diags.Report(decl.getLocation(), noteId) << name;
     return std::nullopt;
   };
 
-  FunctionType func;
-  auto retType = matchType(decl, *decl.getReturnType().getTypePtr());
+  function_type func;
+  auto retType = match_type(decl, *decl.getReturnType().getTypePtr());
   if (!retType.has_value()) return reportNote();
-  func.returnType = std::make_unique<Type>(std::move(retType.value()));
+  func.return_type = std::make_unique<c_type>(std::move(retType.value()));
   for (auto param : decl.parameters()) {
-    auto var = matchParam(*param);
+    auto var = match_param(*param);
     if (!var.has_value()) return reportNote();
     func.params.push_back(std::move(var.value()));
   }
 
-  return Entity{std::move(name), Type{std::move(func)}};
+  return entity{std::move(name), c_type{std::move(func)}};
 }
 
-std::optional<ffi::TagDecl> ffi::Visitor::matchEnum(
+std::optional<ffi::tag_decl> ffi::ast_visitor::match_enum(
     const clang::EnumDecl& decl, llvm::StringRef defName) const {
   auto& diags = context.getDiagnostics();
 
@@ -308,7 +309,7 @@ std::optional<ffi::TagDecl> ffi::Visitor::matchEnum(
     }
     name = defName;
   }
-  auto type = matchType(decl, *decl.getIntegerType().getTypePtr());
+  auto type = match_type(decl, *decl.getIntegerType().getTypePtr());
   if (!type.has_value()) {
     const auto id =
         diags.getCustomDiagID(clang::DiagnosticsEngine::Note,
@@ -325,10 +326,10 @@ std::optional<ffi::TagDecl> ffi::Visitor::matchEnum(
     enm.values.try_emplace(std::move(itemName), initVal);
   }
 
-  return TagDecl{name, Tag{std::move(enm)}};
+  return tag_decl{name, tag_type{std::move(enm)}};
 }
 
-std::optional<ffi::TagDecl> ffi::Visitor::matchStruct(
+std::optional<ffi::tag_decl> ffi::ast_visitor::match_struct(
     const clang::RecordDecl& decl, llvm::StringRef defName) const {
   auto name = decl.getName();
   if (name.empty()) {
@@ -346,29 +347,29 @@ std::optional<ffi::TagDecl> ffi::Visitor::matchStruct(
 
   Structure record;
   for (auto f : decl.fields()) {
-    auto type = matchType(*f, *f->getType().getTypePtr());
+    auto type = match_type(*f, *f->getType().getTypePtr());
     if (!type.has_value()) return std::nullopt;
     record.fields.push_back({f->getName(), std::move(type.value())});
   }
 
-  return TagDecl{name, Tag{std::move(record)}};
+  return tag_decl{name, tag_type{std::move(record)}};
 }
 
-std::optional<ffi::TagDecl> ffi::Visitor::matchTypedef(
+std::optional<ffi::tag_decl> ffi::ast_visitor::match_typedef(
     const clang::TypedefNameDecl& decl) const {
   auto& type = *decl.getUnderlyingType().getTypePtr();
   auto name = decl.getName();
   if (auto enumType = type.getAs<clang::EnumType>())
-    return matchEnum(*enumType->getDecl(), name);
+    return match_enum(*enumType->getDecl(), name);
   else if (auto structType = type.getAs<clang::RecordType>())
-    return matchStruct(*structType->getDecl(), name);
+    return match_struct(*structType->getDecl(), name);
   return std::nullopt;
 }
 
-std::optional<ffi::Entity> ffi::Visitor::matchParam(
+std::optional<ffi::entity> ffi::ast_visitor::match_param(
     const clang::ParmVarDecl& param) const {
   auto& diags = context.getDiagnostics();
-  auto res = matchVarRaw(param);
+  auto res = match_var_raw(param);
   if (!res.has_value()) {
     const auto id = diags.getCustomDiagID(clang::DiagnosticsEngine::Note,
                                           "in declaration for parameter '%0'.");

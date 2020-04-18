@@ -22,38 +22,38 @@
 #include <clang/AST/ASTConsumer.h>
 #include <clang/Tooling/Tooling.h>
 
-#include "Config.h"
-#include "Module.h"
+#include "config.h"
+#include "module.h"
 
 namespace ffi {
-using ModuleList = std::map<std::string, ffi::ModuleContents>;
+using module_list = std::map<std::string, ffi::ModuleContents>;
 
-struct FFIDriver final : clang::tooling::FrontendActionFactory {
+struct ffi_driver final : clang::tooling::FrontendActionFactory {
   clang::FrontendAction* create() override;
-  config::Config cfg;
-  ModuleList modules;
+  config::config cfg;
+  module_list modules;
 };
 
-class InfoCollectAction final : public clang::ASTFrontendAction {
+class info_collect_action final : public clang::ASTFrontendAction {
  public:
-  InfoCollectAction(config::Config& cfg, ModuleList& modules);
+  info_collect_action(config::config& cfg, module_list& modules);
   std::unique_ptr<clang::ASTConsumer> CreateASTConsumer(
-      clang::CompilerInstance& Compiler, llvm::StringRef InFile) override;
+      clang::CompilerInstance& compiler, llvm::StringRef in_file) override;
 
  private:
-  config::Config& cfg;
-  ModuleList& modules;
+  config::config& cfg;
+  module_list& modules;
 };
 
-class InfoCollector final : public clang::ASTConsumer {
+class info_collector final : public clang::ASTConsumer {
  public:
-  InfoCollector(config::Config& cfg, std::string_view fileName,
-                ModuleContents& currentModule);
-  void HandleTranslationUnit(clang::ASTContext& Context) override;
+  info_collector(config::config& cfg, std::string_view file_name,
+                 ModuleContents& current_module);
+  void HandleTranslationUnit(clang::ASTContext& context) override;
 
  private:
-  config::Config& cfg;
-  std::string_view fileName;
-  ModuleContents& currentModule;
+  config::config& cfg;
+  std::string_view file_name;
+  ModuleContents& current_module;
 };
 }  // namespace ffi

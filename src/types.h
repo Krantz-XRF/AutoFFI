@@ -19,27 +19,25 @@
 
 #include <variant>
 
-#include <llvm/ObjectYAML/YAML.h>
-
-#include "Function.h"
-#include "OpaqueType.h"
-#include "PointerType.h"
-#include "PrimTypes.h"
+#include "function_type.h"
+#include "opaque_type.h"
+#include "pointer_type.h"
+#include "prim_types.h"
 
 namespace ffi {
-struct Type {
+struct c_type {
   template <typename T, typename... Ts>
   using variant_drop_1 = std::variant<Ts...>;
 
-  using type = variant_drop_1<void
+  using variant = variant_drop_1<void
 #define TYPE(TypeName) , TypeName
-#include "Types.def"
-                              >;
-  type value;
+#include "types.def"
+                                 >;
+  variant value;
 };
 
-using Entity = std::pair<std::string, Type>;
-using ConstEntity = const std::pair<const std::string, Type>;
+using entity = std::pair<std::string, c_type>;
+using const_entity = const std::pair<const std::string, c_type>;
 
 namespace internal {
 template <typename L, typename A>
@@ -60,5 +58,5 @@ struct index<V<B, Args...>, A> {
 template <typename L, typename A>
 constexpr ptrdiff_t index = internal::index<L, A>::value;
 
-bool is_marshallable(const Type& type) noexcept;
+bool is_marshallable(const c_type& type) noexcept;
 }  // namespace ffi

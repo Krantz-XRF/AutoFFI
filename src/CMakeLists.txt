@@ -1,14 +1,14 @@
 target_sources(AutoFFI PRIVATE
   # Driver Program
-  "Config.def" "Config.h" "AutoFFI.cpp" "Driver.h" "Driver.cpp"
+  "config.def" "config.h" "main.cpp" "driver.h" "driver.cpp"
   # C Type Information
-  "Types.def" "Types.h" "Types.cpp"
-  "Function.h" "OpaqueType.h" "PointerType.h" "Tag.h"
-  "PrimTypes.def" "PrimTypes.h" "PrimTypes.cpp"
+  "types.def" "types.h" "types.cpp"
+  "function_type.h" "opaque_type.h" "pointer_type.h" "tag_type.h"
+  "prim_types.def" "prim_types.h" "prim_types.cpp"
   # Haskell CodeGen
-  "HaskellCodeGen.cpp" "HaskellCodeGen.h"
-  "Marshaller.h" "Marshaller.cpp"
-  "VisitTypes.h" "VisitTypes.cpp"
-  "Module.h" "Module.cpp"
+  "haskell_code_gen.cpp" "haskell_code_gen.h"
+  "marshaller.h" "marshaller.cpp"
+  "visit_types.h" "visit_types.cpp"
+  "module.h" "module.cpp"
   # LLVM YAML
-  "YAML.h")
+  "yaml.h")

@@ -23,15 +23,15 @@
 
 #include <llvm/ObjectYAML/YAML.h>
 
-#include "Config.h"
-#include "Function.h"
-#include "Marshaller.h"
-#include "Module.h"
-#include "OpaqueType.h"
-#include "PointerType.h"
-#include "PrimTypes.h"
-#include "Tag.h"
-#include "Types.h"
+#include "config.h"
+#include "function_type.h"
+#include "marshaller.h"
+#include "module.h"
+#include "opaque_type.h"
+#include "pointer_type.h"
+#include "prim_types.h"
+#include "tag_type.h"
+#include "types.h"
 
 template <typename T>
 struct llvm::yaml::MappingTraits<std::unique_ptr<T>> {
@@ -42,33 +42,33 @@ struct llvm::yaml::MappingTraits<std::unique_ptr<T>> {
 };
 
 template <>
-struct llvm::yaml::MappingTraits<ffi::FunctionType> {
-  static void mapping(IO& io, ffi::FunctionType& func) {
-    io.mapRequired("returnType", func.returnType);
+struct llvm::yaml::MappingTraits<ffi::function_type> {
+  static void mapping(IO& io, ffi::function_type& func) {
+    io.mapRequired("return_type", func.return_type);
     io.mapRequired("params", func.params);
   }
 };
 
 template <>
-struct llvm::yaml::MappingTraits<ffi::OpaqueType> {
-  static void mapping(IO& io, ffi::OpaqueType& type) {
+struct llvm::yaml::MappingTraits<ffi::opaque_type> {
+  static void mapping(IO& io, ffi::opaque_type& type) {
     io.mapRequired("alias", type.name);
   }
 };
 
 template <>
-struct llvm::yaml::MappingTraits<ffi::PointerType> {
-  static void mapping(IO& io, ffi::PointerType& type) {
+struct llvm::yaml::MappingTraits<ffi::pointer_type> {
+  static void mapping(IO& io, ffi::pointer_type& type) {
     io.mapRequired("pointee", type.pointee);
   }
 };
 
 template <>
-struct llvm::yaml::MappingTraits<ffi::Type> {
+struct llvm::yaml::MappingTraits<ffi::c_type> {
   template <typename T>
-  static constexpr ptrdiff_t Index = ffi::index<ffi::Type::type, T>;
+  static constexpr ptrdiff_t Index = ffi::index<ffi::c_type::variant, T>;
 
-  static void mapping(IO& io, ffi::Type& type) {
+  static void mapping(IO& io, ffi::c_type& type) {
     const auto idx = type.value.index();
 
     if (false) static_cast<void>(0);
@@ -78,7 +78,7 @@ struct llvm::yaml::MappingTraits<ffi::Type> {
     auto& clause = std::get<ffi::TypeName>(type.value);         \
     MappingTraits<ffi::TypeName>::mapping(io, clause);          \
   }
-#include "Types.def"
+#include "types.def"
   }
 };
 
@@ -104,12 +104,12 @@ struct llvm::yaml::CustomMappingTraits<ffi::Enumeration> {
 };
 
 template <>
-struct llvm::yaml::MappingTraits<ffi::Tag> {
-  using vtype = decltype(std::declval<ffi::Tag>().payload);
+struct llvm::yaml::MappingTraits<ffi::tag_type> {
+  using vtype = decltype(std::declval<ffi::tag_type>().payload);
   template <typename T>
   static constexpr ptrdiff_t Index = ffi::index<vtype, T>;
 
-  static void mapping(IO& io, ffi::Tag& tag) {
+  static void mapping(IO& io, ffi::tag_type& tag) {
     const auto idx = tag.payload.index();
 
     if (io.mapTag("Structure", idx == Index<ffi::Structure>)) {
@@ -125,13 +125,13 @@ struct llvm::yaml::MappingTraits<ffi::Tag> {
 };
 
 template <>
-struct llvm::yaml::MappingTraits<ffi::Entity> {
-  static void mapping(IO& io, ffi::Entity& entity) {
+struct llvm::yaml::MappingTraits<ffi::entity> {
+  static void mapping(IO& io, ffi::entity& entity) {
     io.mapRequired("name", entity.first);
     io.mapRequired("type", entity.second);
   }
 };
-LLVM_YAML_IS_SEQUENCE_VECTOR(ffi::Entity)
+LLVM_YAML_IS_SEQUENCE_VECTOR(ffi::entity)
 
 template <>
 struct llvm::yaml::MappingTraits<ffi::ModuleContents> {
@@ -155,20 +155,20 @@ struct llvm::yaml::CustomMappingTraits<std::map<std::string, T>> {
 };
 
 template <>
-struct llvm::yaml::ScalarEnumerationTraits<ffi::Marshaller::Case> {
-  static void enumeration(IO& io, ffi::Marshaller::Case& c) {
-    io.enumCase(c, "snake_case", ffi::Marshaller::Case_snake_case);
-    io.enumCase(c, "Snake_case", ffi::Marshaller::Case_Snake_case);
-    io.enumCase(c, "SNAKE_CASE", ffi::Marshaller::Case_SNAKE_CASE);
-    io.enumCase(c, "camelCase", ffi::Marshaller::Case_camelCase);
-    io.enumCase(c, "PascalCase", ffi::Marshaller::Case_PascalCase);
-    io.enumCase(c, "preserve", ffi::Marshaller::Case_preserve);
+struct llvm::yaml::ScalarEnumerationTraits<ffi::marshaller::Case> {
+  static void enumeration(IO& io, ffi::marshaller::Case& c) {
+    io.enumCase(c, "snake_case", ffi::marshaller::Case_snake_case);
+    io.enumCase(c, "Snake_case", ffi::marshaller::Case_Snake_case);
+    io.enumCase(c, "SNAKE_CASE", ffi::marshaller::Case_SNAKE_CASE);
+    io.enumCase(c, "camelCase", ffi::marshaller::Case_camelCase);
+    io.enumCase(c, "PascalCase", ffi::marshaller::Case_PascalCase);
+    io.enumCase(c, "preserve", ffi::marshaller::Case_preserve);
   }
 };
 
 template <>
-struct llvm::yaml::MappingTraits<ffi::Marshaller> {
-  static void mapping(IO& io, ffi::Marshaller& m) {
+struct llvm::yaml::MappingTraits<ffi::marshaller> {
+  static void mapping(IO& io, ffi::marshaller& m) {
     io.mapOptional("removePrefix", m.remove_prefix);
     io.mapOptional("removeSuffix", m.remove_suffix);
     io.mapOptional("addPrefix", m.add_prefix);
@@ -178,15 +178,15 @@ struct llvm::yaml::MappingTraits<ffi::Marshaller> {
 };
 
 template <>
-struct llvm::yaml::MappingTraits<config::Config> {
-  static void mapping(IO& io, config::Config& cfg) {
+struct llvm::yaml::MappingTraits<config::config> {
+  static void mapping(IO& io, config::config& cfg) {
 #define FIELD_OPTIONAL(Type, Field, Default) io.mapOptional(#Field, cfg.Field);
 #define FIELD_REQUIRED(Type, Field, Default) io.mapRequired(#Field, cfg.Field);
-#include "Config.def"
+#include "config.def"
   }
-  static StringRef validate(IO& io, config::Config& cfg) {
-    using Case = ffi::Marshaller::Case;
-    if (cfg.Marshaller.output_case != ffi::Marshaller::Case_preserve ||
+  static StringRef validate(IO& io, config::config& cfg) {
+    using Case = ffi::marshaller::Case;
+    if (cfg.Marshaller.output_case != ffi::marshaller::Case_preserve ||
         !cfg.Marshaller.add_prefix.empty())
       return "The universal marshaller should not specify a case or add "
              "a prefix, for modules, types and functions require "
@@ -194,7 +194,7 @@ struct llvm::yaml::MappingTraits<config::Config> {
     else if (!std::all_of(cfg.FileMarshallers.cbegin(),
                           cfg.FileMarshallers.cend(), [](const auto& m) {
                             return m.second.output_case ==
-                                       ffi::Marshaller::Case_preserve &&
+                                       ffi::marshaller::Case_preserve &&
                                    m.second.add_prefix.empty();
                           }))
       return "The file marshallers should not specify a case or add a "

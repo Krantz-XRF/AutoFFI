@@ -14,12 +14,9 @@ message(STATUS "Using ClangConfig.cmake in ${Clang_DIR}")
 # Use this fmt library in place of C++20 std::format
 find_package(fmt 6 REQUIRED)
 
-add_subdirectory(lava)
-
 add_executable(AutoFFI)
 add_subdirectory(src)
 
 target_include_directories(AutoFFI SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS})
 target_link_directories(AutoFFI PRIVATE ${LLVM_LIBRARY_DIRS})
-target_link_libraries(AutoFFI PRIVATE lava-assert
-  clangTooling clangBasic clangASTMatchers fmt::fmt)
+target_link_libraries(AutoFFI PRIVATE clangTooling clangBasic clangASTMatchers fmt::fmt)

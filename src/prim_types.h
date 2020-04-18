@@ -45,19 +45,19 @@ constexpr bool is_unsigned(clang::BuiltinType::Kind) noexcept;
 constexpr bool is_floating(clang::BuiltinType::Kind) noexcept;
 constexpr bool is_placeholder(clang::BuiltinType::Kind) noexcept;
 
-struct ScalarType {
+struct scalar_type {
   enum Signedness : int8_t {
 #define PRIM_TYPE_SIGN(Name) Name,
 #define PRIM_TYPE_SIGN_SYNONYM(Name, Target) Name = Target,
-#include "PrimTypes.def"
+#include "prim_types.def"
   };
   enum Qualifier : int8_t {
 #define PRIM_TYPE_QUALIFIER(Name) Name,
-#include "PrimTypes.def"
+#include "prim_types.def"
   };
   enum Width : int8_t {
 #define PRIM_TYPE_WIDTH(Value) Width##Value,
-#include "PrimTypes.def"
+#include "prim_types.def"
   };
   Signedness sign;
   Qualifier qualifier;
@@ -65,17 +65,17 @@ struct ScalarType {
 
   std::string as_haskell() const noexcept;
 
-  static std::optional<ScalarType> from_clang(
+  static std::optional<scalar_type> from_clang(
       clang::BuiltinType::Kind type) noexcept;
-  static std::optional<ScalarType> from_name(std::string_view type) noexcept;
+  static std::optional<scalar_type> from_name(std::string_view type) noexcept;
 };
 
-constexpr ScalarType::Signedness signedness_of(
+constexpr scalar_type::Signedness signedness_of(
     clang::BuiltinType::Kind) noexcept;
 
-constexpr czstring to_string(ScalarType::Signedness s) noexcept;
-constexpr czstring to_string(ScalarType::Qualifier q) noexcept;
-constexpr czstring to_string(ScalarType::Width w) noexcept;
+constexpr czstring to_string(scalar_type::Signedness s) noexcept;
+constexpr czstring to_string(scalar_type::Qualifier q) noexcept;
+constexpr czstring to_string(scalar_type::Width w) noexcept;
 }  // namespace ffi
 
 constexpr ffi::czstring ffi::name_of(clang::BuiltinType::Kind k) {
@@ -134,63 +134,63 @@ constexpr bool ffi::is_placeholder(clang::BuiltinType::Kind k) noexcept {
   return class_of(k) == Class::Placeholder;
 }
 
-constexpr ffi::ScalarType::Signedness ffi::signedness_of(
+constexpr ffi::scalar_type::Signedness ffi::signedness_of(
     clang::BuiltinType::Kind k) noexcept {
-  return is_signed(k) ? ScalarType::Signed : ScalarType::Unsigned;
+  return is_signed(k) ? scalar_type::Signed : scalar_type::Unsigned;
 }
 
-constexpr ffi::czstring ffi::to_string(ScalarType::Signedness s) noexcept {
+constexpr ffi::czstring ffi::to_string(scalar_type::Signedness s) noexcept {
   constexpr const char* names[]{
 #define PRIM_TYPE_SIGN(Name) #Name,
-#include "PrimTypes.def"
+#include "prim_types.def"
   };
   return names[s];
 }
 
-constexpr ffi::czstring ffi::to_string(ScalarType::Qualifier q) noexcept {
+constexpr ffi::czstring ffi::to_string(scalar_type::Qualifier q) noexcept {
   constexpr const char* names[]{
 #define PRIM_TYPE_QUALIFIER(Name) #Name,
-#include "PrimTypes.def"
+#include "prim_types.def"
   };
   return names[q];
 }
 
-constexpr ffi::czstring ffi::to_string(ScalarType::Width w) noexcept {
+constexpr ffi::czstring ffi::to_string(scalar_type::Width w) noexcept {
   constexpr const char* names[]{
 #define PRIM_TYPE_WIDTH(Value) #Value,
-#include "PrimTypes.def"
+#include "prim_types.def"
   };
   return names[w];
 }
 
 template <>
-struct llvm::yaml::ScalarEnumerationTraits<ffi::ScalarType::Signedness> {
-  static void enumeration(IO& io, ffi::ScalarType::Signedness& s) {
-#define PRIM_TYPE_SIGN(Name) io.enumCase(s, #Name, ffi::ScalarType::Name);
-#include "PrimTypes.def"
+struct llvm::yaml::ScalarEnumerationTraits<ffi::scalar_type::Signedness> {
+  static void enumeration(IO& io, ffi::scalar_type::Signedness& s) {
+#define PRIM_TYPE_SIGN(Name) io.enumCase(s, #Name, ffi::scalar_type::Name);
+#include "prim_types.def"
   }
 };
 
 template <>
-struct llvm::yaml::ScalarEnumerationTraits<ffi::ScalarType::Qualifier> {
-  static void enumeration(IO& io, ffi::ScalarType::Qualifier& q) {
-#define PRIM_TYPE_QUALIFIER(Name) io.enumCase(q, #Name, ffi::ScalarType::Name);
-#include "PrimTypes.def"
+struct llvm::yaml::ScalarEnumerationTraits<ffi::scalar_type::Qualifier> {
+  static void enumeration(IO& io, ffi::scalar_type::Qualifier& q) {
+#define PRIM_TYPE_QUALIFIER(Name) io.enumCase(q, #Name, ffi::scalar_type::Name);
+#include "prim_types.def"
   }
 };
 
 template <>
-struct llvm::yaml::ScalarEnumerationTraits<ffi::ScalarType::Width> {
-  static void enumeration(IO& io, ffi::ScalarType::Width& w) {
+struct llvm::yaml::ScalarEnumerationTraits<ffi::scalar_type::Width> {
+  static void enumeration(IO& io, ffi::scalar_type::Width& w) {
 #define PRIM_TYPE_WIDTH(Name) \
-  io.enumCase(w, #Name, ffi::ScalarType::Width##Name);
-#include "PrimTypes.def"
+  io.enumCase(w, #Name, ffi::scalar_type::Width##Name);
+#include "prim_types.def"
   }
 };
 
 template <>
-struct llvm::yaml::MappingTraits<ffi::ScalarType> {
-  static void mapping(IO& io, ffi::ScalarType& scalar) {
+struct llvm::yaml::MappingTraits<ffi::scalar_type> {
+  static void mapping(IO& io, ffi::scalar_type& scalar) {
     io.mapRequired("sign", scalar.sign);
     io.mapRequired("qualifier", scalar.qualifier);
     io.mapRequired("width", scalar.width);

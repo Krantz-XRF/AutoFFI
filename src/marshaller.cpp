@@ -15,13 +15,13 @@
  * along with auto-FFI.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Marshaller.h"
+#include "marshaller.h"
 
 #include <algorithm>
 #include <array>
 #include <cctype>
 
-auto ffi::Marshaller::from_snake_case(std::string_view name) -> pss {
+auto ffi::marshaller::from_snake_case(std::string_view name) -> pss {
   auto notalnum = [](char c) { return !isalnum(c); };
   auto p = std::find_if(name.cbegin(), name.cend(), notalnum);
   if (p == name.cend()) return {name, {}};
@@ -29,30 +29,30 @@ auto ffi::Marshaller::from_snake_case(std::string_view name) -> pss {
   return {name.substr(0, d), name.substr(d + 1)};
 }
 
-auto ffi::Marshaller::from_CamelCase(std::string_view name) -> pss {
+auto ffi::marshaller::from_CamelCase(std::string_view name) -> pss {
   auto p = std::find_if(std::next(name.cbegin()), name.cend(), isupper);
   if (p == name.cend()) return {name, {}};
   auto d = p - name.cbegin();
   return {name.substr(0, d), name.substr(d)};
 }
 
-void ffi::Marshaller::to_snake_case(std::string& res, std::string_view s) {
+void ffi::marshaller::to_snake_case(std::string& res, std::string_view s) {
   if (!res.empty()) res.push_back('_');
   std::transform(s.cbegin(), s.cend(), std::back_inserter(res), tolower);
 }
 
-void ffi::Marshaller::to_SNAKE_CASE(std::string& res, std::string_view s) {
+void ffi::marshaller::to_SNAKE_CASE(std::string& res, std::string_view s) {
   if (!res.empty()) res.push_back('_');
   std::transform(s.cbegin(), s.cend(), std::back_inserter(res), toupper);
 }
 
-void ffi::Marshaller::to_PascalCase(std::string& res, std::string_view s) {
+void ffi::marshaller::to_PascalCase(std::string& res, std::string_view s) {
   if (s.empty()) return;
   res.push_back(toupper(s[0]));
   std::transform(s.cbegin() + 1, s.cend(), std::back_inserter(res), tolower);
 }
 
-bool ffi::Marshaller::is_type_case() const {
+bool ffi::marshaller::is_type_case() const {
   if (add_prefix.empty())
     return output_case == Case_PascalCase || output_case == Case_SNAKE_CASE ||
            output_case == Case_Snake_case;
@@ -60,14 +60,14 @@ bool ffi::Marshaller::is_type_case() const {
     return isupper(add_prefix[0]);
 }
 
-bool ffi::Marshaller::is_func_case() const {
+bool ffi::marshaller::is_func_case() const {
   if (add_prefix.empty())
     return output_case == Case_camelCase || output_case == Case_snake_case;
   else
     return islower(add_prefix[0]) || add_prefix[0] == '_';
 }
 
-std::string ffi::Marshaller::transform_raw(std::string_view name) const {
+std::string ffi::marshaller::transform_raw(std::string_view name) const {
   if (name.length() >= remove_prefix.length() &&
       std::equal(remove_prefix.cbegin(), remove_prefix.cend(), name.cbegin()))
     name.remove_prefix(remove_prefix.length());
@@ -109,7 +109,7 @@ std::string ffi::Marshaller::transform_raw(std::string_view name) const {
   return res;
 }
 
-std::string ffi::Marshaller::transform(std::string_view name) const {
+std::string ffi::marshaller::transform(std::string_view name) const {
   if (forward_marshaller && afterward)
     return forward_marshaller->transform(transform_raw(name));
   else if (forward_marshaller)

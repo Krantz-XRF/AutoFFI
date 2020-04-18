@@ -17,13 +17,10 @@
 
 #pragma once
 
-#include <llvm/ObjectYAML/YAML.h>
+#include <string>
 
-#include "Marshaller.h"
-
-namespace config {
-struct Config {
-#define FIELD(Type, Field, Default) Type Field{Default};
-#include "Config.def"
+namespace ffi {
+struct opaque_type {
+  std::string name;
 };
-}  // namespace config
+}  // namespace ffi

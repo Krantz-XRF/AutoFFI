@@ -1,0 +1,6 @@
+TYPE(scalar_type)
+TYPE(opaque_type)
+TYPE(function_type)
+TYPE(pointer_type)
+
+#undef TYPE

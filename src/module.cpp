@@ -15,12 +15,4 @@
  * along with auto-FFI.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#pragma once
-
-#include <string>
-
-namespace ffi {
-struct OpaqueType {
-  std::string name;
-};
-}  // namespace ffi
+#include "module.h"

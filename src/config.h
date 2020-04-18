@@ -15,4 +15,13 @@
  * along with auto-FFI.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Module.h"
+#pragma once
+
+#include "marshaller.h"
+
+namespace config {
+struct config {
+#define FIELD(Type, Field, Default) Type Field{Default};
+#include "config.def"
+};
+}  // namespace config

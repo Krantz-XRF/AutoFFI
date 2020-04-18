@@ -15,19 +15,15 @@
  * along with auto-FFI.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "PrimTypes.h"
+#include "prim_types.h"
 
-#include <iostream>
 #include <regex>
-#include <sstream>
 
 #include <llvm/IR/DiagnosticInfo.h>
 
-#include <lava/assert.h>
-
 #include <fmt/format.h>
 
-std::string ffi::ScalarType::as_haskell() const noexcept {
+std::string ffi::scalar_type::as_haskell() const noexcept {
   constexpr const char* chQual[]{"CU", "CS", "C"};
   if (qualifier == Void)
     return "()";
@@ -43,54 +39,54 @@ std::string ffi::ScalarType::as_haskell() const noexcept {
     return fmt::format("{}{}", sign ? "C" : "CU", to_string(qualifier));
 }
 
-std::optional<ffi::ScalarType> ffi::ScalarType::from_clang(
+std::optional<ffi::scalar_type> ffi::scalar_type::from_clang(
     clang::BuiltinType::Kind type) noexcept {
   using K = clang::BuiltinType::Kind;
   const auto signedness = signedness_of(type);
   switch (type) {
     case K::Void:
-      return ScalarType{None, Void, WidthNone};
+      return scalar_type{None, Void, WidthNone};
     case K::Bool:
-      return ScalarType{Unsigned, Bool, WidthNone};
+      return scalar_type{Unsigned, Bool, WidthNone};
     case K::Char_U:
     case K::Char_S:
-      return ScalarType{Unspecified, Char, WidthNone};
+      return scalar_type{Unspecified, Char, WidthNone};
     case K::UChar:
     case K::SChar:
-      return ScalarType{signedness, Char, WidthNone};
+      return scalar_type{signedness, Char, WidthNone};
     case K::WChar_U:
     case K::WChar_S:
-      return ScalarType{Unspecified, Wchar, WidthNone};
+      return scalar_type{Unspecified, Wchar, WidthNone};
     case K::Char8:
-      return ScalarType{Unsigned, UniChar, Width8};
+      return scalar_type{Unsigned, UniChar, Width8};
     case K::Char16:
-      return ScalarType{Unsigned, UniChar, Width16};
+      return scalar_type{Unsigned, UniChar, Width16};
     case K::Char32:
-      return ScalarType{Unsigned, UniChar, Width32};
+      return scalar_type{Unsigned, UniChar, Width32};
     case K::UShort:
     case K::Short:
-      return ScalarType{signedness, Short, WidthNone};
+      return scalar_type{signedness, Short, WidthNone};
     case K::UInt:
     case K::Int:
-      return ScalarType{signedness, Int, WidthNone};
+      return scalar_type{signedness, Int, WidthNone};
     case K::ULong:
     case K::Long:
-      return ScalarType{signedness, Long, WidthNone};
+      return scalar_type{signedness, Long, WidthNone};
     case K::ULongLong:
     case K::LongLong:
-      return ScalarType{signedness, LLong, WidthNone};
+      return scalar_type{signedness, LLong, WidthNone};
     case K::Float:
-      return ScalarType{Signed, Float, WidthNone};
+      return scalar_type{Signed, Float, WidthNone};
     case K::Double:
-      return ScalarType{Signed, Double, WidthNone};
+      return scalar_type{Signed, Double, WidthNone};
     default:
       return std::nullopt;
   }
 }
 
-std::optional<ffi::ScalarType> ffi::ScalarType::from_name(
+std::optional<ffi::scalar_type> ffi::scalar_type::from_name(
     std::string_view type) noexcept {
-  static const std::map<std::string_view, ScalarType> scalar_types{
+  static const std::map<std::string_view, scalar_type> scalar_types{
       {"wchar_t", {Unspecified, Wchar, WidthNone}},
       {"char8_t", {Unsigned, UniChar, Width8}},
       {"char16_t", {Unsigned, UniChar, Width16}},
@@ -109,7 +105,8 @@ std::optional<ffi::ScalarType> ffi::ScalarType::from_name(
 
   if (match.empty()) return std::nullopt;
 
-  ffi::ScalarType res{match[1].matched ? Unsigned : Signed, Special, WidthNone};
+  ffi::scalar_type res{match[1].matched ? Unsigned : Signed, Special,
+                       WidthNone};
   if (const auto c = *match[2].first; c == 'p')
     res.width = WidthPtr;
   else if (c == 'm')
