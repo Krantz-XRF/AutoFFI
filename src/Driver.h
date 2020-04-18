@@ -28,13 +28,13 @@
 namespace ffi {
 using ModuleList = std::map<std::string, ffi::ModuleContents>;
 
-struct FFIDriver : clang::tooling::FrontendActionFactory {
+struct FFIDriver final : clang::tooling::FrontendActionFactory {
   clang::FrontendAction* create() override;
   config::Config cfg;
   ModuleList modules;
 };
 
-class InfoCollectAction : public clang::ASTFrontendAction {
+class InfoCollectAction final : public clang::ASTFrontendAction {
  public:
   InfoCollectAction(config::Config& cfg, ModuleList& modules);
   std::unique_ptr<clang::ASTConsumer> CreateASTConsumer(
@@ -45,7 +45,7 @@ class InfoCollectAction : public clang::ASTFrontendAction {
   ModuleList& modules;
 };
 
-class InfoCollector : public clang::ASTConsumer {
+class InfoCollector final : public clang::ASTConsumer {
  public:
   InfoCollector(config::Config& cfg, std::string_view fileName,
                 ModuleContents& currentModule);
