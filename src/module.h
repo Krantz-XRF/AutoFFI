@@ -25,11 +25,11 @@
 #include "types.h"
 
 namespace ffi {
-struct ModuleContents {
-  std::map<std::string, c_type> entities;
-  std::map<std::string, tag_type> tags;
-  std::vector<std::string> imports;
+struct module_contents {
+  std::map<std::string, ctype> entities{};
+  std::map<std::string, tag_type> tags{};
+  std::vector<std::string> imports{};
 };
 
-using module = std::pair<std::string, ModuleContents>;
+using cmodule = std::pair<std::string, module_contents>;
 }  // namespace ffi

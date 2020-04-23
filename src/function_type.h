@@ -22,11 +22,11 @@
 #include <vector>
 
 namespace ffi {
-struct c_type;
-using entity = std::pair<std::string, c_type>;
+struct ctype;
+using entity = std::pair<std::string, ctype>;
 
 struct function_type {
-  std::unique_ptr<c_type> return_type;
-  std::vector<entity> params;
+  std::unique_ptr<ctype> return_type{};
+  std::vector<entity> params{};
 };
 }  // namespace ffi

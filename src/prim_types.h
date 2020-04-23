@@ -63,7 +63,7 @@ struct scalar_type {
   Qualifier qualifier;
   Width width;
 
-  std::string as_haskell() const noexcept;
+  [[nodiscard]] std::string as_haskell() const noexcept;
 
   static std::optional<scalar_type> from_clang(
       clang::BuiltinType::Kind type) noexcept;

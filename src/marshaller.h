@@ -17,7 +17,6 @@
 
 #pragma once
 
-#include <functional>
 #include <map>
 #include <string>
 #include <string_view>
@@ -41,8 +40,8 @@ struct marshaller {
   static void to_SNAKE_CASE(std::string&, std::string_view);
   static void to_PascalCase(std::string&, std::string_view);
 
-  bool is_type_case() const;
-  bool is_func_case() const;
+  [[nodiscard]] bool is_type_case() const;
+  [[nodiscard]] bool is_func_case() const;
 
   Case output_case{Case_preserve};
   std::string remove_prefix;
@@ -52,8 +51,8 @@ struct marshaller {
   marshaller* forward_marshaller{nullptr};
   bool afterward{false};
 
-  std::string transform_raw(std::string_view) const;
-  std::string transform(std::string_view) const;
+  [[nodiscard]] std::string transform_raw(std::string_view) const;
+  [[nodiscard]] std::string transform(std::string_view) const;
 };
 
 using marshaller_map = std::map<std::string, marshaller>;

@@ -25,7 +25,7 @@
 #include "prim_types.h"
 
 namespace ffi {
-struct c_type {
+struct ctype {
   template <typename T, typename... Ts>
   using variant_drop_1 = std::variant<Ts...>;
 
@@ -36,8 +36,8 @@ struct c_type {
   variant value;
 };
 
-using entity = std::pair<std::string, c_type>;
-using const_entity = const std::pair<const std::string, c_type>;
+using entity = std::pair<std::string, ctype>;
+using const_entity = const std::pair<const std::string, ctype>;
 
 namespace internal {
 template <typename L, typename A>
@@ -58,5 +58,5 @@ struct index<V<B, Args...>, A> {
 template <typename L, typename A>
 constexpr ptrdiff_t index = internal::index<L, A>::value;
 
-bool is_marshallable(const c_type& type) noexcept;
+bool is_marshallable(const ctype& type) noexcept;
 }  // namespace ffi

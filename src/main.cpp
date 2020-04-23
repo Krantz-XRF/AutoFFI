@@ -17,7 +17,6 @@
 
 #include <array>
 #include <iostream>
-#include <map>
 
 #include <clang/Tooling/CompilationDatabase.h>
 #include <clang/Tooling/Tooling.h>
@@ -32,7 +31,6 @@
 #include "haskell_code_gen.h"
 #include "yaml.h"
 
-namespace tool = clang::tooling;
 namespace cl = llvm::cl;
 
 namespace {
@@ -109,11 +107,11 @@ int main(int argc, const char* argv[]) {
       llvm::sys::fs::set_current_path(driver.cfg.RootDirectory);
 
     // Compiler options
-    tool::FixedCompilationDatabase compilations{
+    clang::tooling::FixedCompilationDatabase compilations{
         driver.cfg.RootDirectory.empty() ? "." : driver.cfg.RootDirectory,
         driver.cfg.CompilerOptions};
 
-    tool::ClangTool tool{compilations, driver.cfg.FileNames};
+    clang::tooling::ClangTool tool{compilations, driver.cfg.FileNames};
 
     if (const auto status = tool.run(&driver)) return status;
 

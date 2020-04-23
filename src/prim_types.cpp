@@ -25,18 +25,16 @@
 
 std::string ffi::scalar_type::as_haskell() const noexcept {
   constexpr const char* chQual[]{"CU", "CS", "C"};
-  if (qualifier == Void)
-    return "()";
-  else if (qualifier >= UniChar && qualifier <= Fast)
+  if (qualifier == Void) return "()";
+  if (qualifier >= UniChar && qualifier <= Fast)
     return fmt::format("{}{}", sign ? "Int" : "Word", to_string(width));
-  else if (qualifier == Char || qualifier == Wchar)
+  if (qualifier == Char || qualifier == Wchar)
     return fmt ::format("{}{}", chQual[sign], to_string(qualifier));
-  else if (qualifier == Special)
+  if (qualifier == Special)
     return fmt::format("{}Int{}", sign ? "C" : "CU", to_string(width));
-  else if (qualifier == Ptrdiff || qualifier == Size)
+  if (qualifier == Ptrdiff || qualifier == Size)
     return fmt::format("C{}", to_string(qualifier));
-  else
-    return fmt::format("{}{}", sign ? "C" : "CU", to_string(qualifier));
+  return fmt::format("{}{}", sign ? "C" : "CU", to_string(qualifier));
 }
 
 std::optional<ffi::scalar_type> ffi::scalar_type::from_clang(
@@ -94,13 +92,13 @@ std::optional<ffi::scalar_type> ffi::scalar_type::from_name(
       {"size_t", {None, Size, WidthNone}},
       {"ptrdiff_t", {None, Ptrdiff, WidthNone}},
   };
-  if (auto p = scalar_types.find(type); p != scalar_types.cend())
+  if (const auto p = scalar_types.find(type); p != scalar_types.cend())
     return p->second;
 
   static const std::regex reg{
       "(u)?int(ptr|max|(?:_(least|fast))?([1-9][0-9]*))_t",
       std::regex::ECMAScript | std::regex::optimize};
-  std::match_results<std::string_view::const_iterator> match;
+  std::match_results<std::string_view::const_iterator> match{};
   std::regex_match(type.cbegin(), type.cend(), match, reg);
 
   if (match.empty()) return std::nullopt;

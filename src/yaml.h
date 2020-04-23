@@ -64,11 +64,11 @@ struct llvm::yaml::MappingTraits<ffi::pointer_type> {
 };
 
 template <>
-struct llvm::yaml::MappingTraits<ffi::c_type> {
+struct llvm::yaml::MappingTraits<ffi::ctype> {
   template <typename T>
-  static constexpr ptrdiff_t Index = ffi::index<ffi::c_type::variant, T>;
+  static constexpr ptrdiff_t Index = ffi::index<ffi::ctype::variant, T>;
 
-  static void mapping(IO& io, ffi::c_type& type) {
+  static void mapping(IO& io, ffi::ctype& type) {
     const auto idx = type.value.index();
 
     if (false) static_cast<void>(0);
@@ -83,22 +83,22 @@ struct llvm::yaml::MappingTraits<ffi::c_type> {
 };
 
 template <>
-struct llvm::yaml::MappingTraits<ffi::Structure> {
-  static void mapping(IO& io, ffi::Structure& tag) {
+struct llvm::yaml::MappingTraits<ffi::structure> {
+  static void mapping(IO& io, ffi::structure& tag) {
     io.mapRequired("fields", tag.fields);
   }
 };
 
 template <>
-struct llvm::yaml::CustomMappingTraits<ffi::Enumeration> {
-  static void inputOne(IO& io, StringRef key, ffi::Enumeration& enm) {
+struct llvm::yaml::CustomMappingTraits<ffi::enumeration> {
+  static void inputOne(IO& io, StringRef key, ffi::enumeration& enm) {
     auto kstr = key.str();
     int value = 0;
     io.mapRequired(kstr.c_str(), value);
     enm.values.try_emplace(kstr, value);
   }
 
-  static void output(IO& io, ffi::Enumeration& enm) {
+  static void output(IO& io, ffi::enumeration& enm) {
     for (auto& [k, v] : enm.values) io.mapRequired(k.c_str(), v);
   }
 };
@@ -112,13 +112,13 @@ struct llvm::yaml::MappingTraits<ffi::tag_type> {
   static void mapping(IO& io, ffi::tag_type& tag) {
     const auto idx = tag.payload.index();
 
-    if (io.mapTag("Structure", idx == Index<ffi::Structure>)) {
-      if (!io.outputting()) tag.payload.emplace<ffi::Structure>();
-      auto& clause = std::get<ffi::Structure>(tag.payload);
-      MappingTraits<ffi::Structure>::mapping(io, clause);
-    } else if (io.mapTag("Enumeration", idx == Index<ffi::Enumeration>)) {
-      if (!io.outputting()) tag.payload.emplace<ffi::Enumeration>();
-      auto& clause = std::get<ffi::Enumeration>(tag.payload);
+    if (io.mapTag("structure", idx == Index<ffi::structure>)) {
+      if (!io.outputting()) tag.payload.emplace<ffi::structure>();
+      auto& clause = std::get<ffi::structure>(tag.payload);
+      MappingTraits<ffi::structure>::mapping(io, clause);
+    } else if (io.mapTag("enumeration", idx == Index<ffi::enumeration>)) {
+      if (!io.outputting()) tag.payload.emplace<ffi::enumeration>();
+      auto& clause = std::get<ffi::enumeration>(tag.payload);
       io.mapRequired("enumerators", clause);
     }
   }
@@ -134,8 +134,8 @@ struct llvm::yaml::MappingTraits<ffi::entity> {
 LLVM_YAML_IS_SEQUENCE_VECTOR(ffi::entity)
 
 template <>
-struct llvm::yaml::MappingTraits<ffi::ModuleContents> {
-  static void mapping(IO& io, ffi::ModuleContents& mod) {
+struct llvm::yaml::MappingTraits<ffi::module_contents> {
+  static void mapping(IO& io, ffi::module_contents& mod) {
     io.mapRequired("entities", mod.entities);
     io.mapRequired("tags", mod.tags);
     io.mapRequired("imports", mod.imports);

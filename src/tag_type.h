@@ -24,17 +24,17 @@
 #include "types.h"
 
 namespace ffi {
-struct Structure {
-  std::vector<entity> fields;
+struct structure {
+  std::vector<entity> fields{};
 };
 
-struct Enumeration {
-  c_type underlying_type;
-  std::map<std::string, intmax_t> values;
+struct enumeration {
+  ctype underlying_type{};
+  std::map<std::string, intmax_t> values{};
 };
 
 struct tag_type {
-  std::variant<Structure, Enumeration> payload;
+  std::variant<structure, enumeration> payload;
 };
 
 using tag_decl = std::pair<std::string, tag_type>;

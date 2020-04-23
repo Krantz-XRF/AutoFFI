@@ -30,15 +30,15 @@ inline uintptr_t getUniqueID(const clang::Decl& decl) {
   using K = clang::Decl::Kind;
   switch (decl.getKind()) {
     case K::CXXRecord:
-      return getUniqueID(static_cast<const clang::RecordDecl&>(decl));
+      return getUniqueID(llvm::cast<clang::RecordDecl>(decl));
     case K::Enum:
-      return getUniqueID(static_cast<const clang::EnumDecl&>(decl));
+      return getUniqueID(llvm::cast<clang::EnumDecl>(decl));
     case K::Function:
-      return getUniqueID(static_cast<const clang::FunctionDecl&>(decl));
+      return getUniqueID(llvm::cast<clang::FunctionDecl>(decl));
     case K::Typedef:
-      return getUniqueID(static_cast<const clang::TypedefNameDecl&>(decl));
+      return getUniqueID(llvm::cast<clang::TypedefNameDecl>(decl));
     case K::Var:
-      return getUniqueID(static_cast<const clang::VarDecl&>(decl));
+      return getUniqueID(llvm::cast<clang::VarDecl>(decl));
     default:
       return reinterpret_cast<uintptr_t>(&decl);
   }
@@ -47,7 +47,7 @@ inline uintptr_t getUniqueID(const clang::Decl& decl) {
 
 bool ffi::ast_visitor::check_decl(const clang::Decl* decl) const {
   if (!decl) return false;
-  if (auto ndecl = llvm::dyn_cast<clang::NamedDecl>(decl);
+  if (const auto ndecl = llvm::dyn_cast<clang::NamedDecl>(decl);
       ndecl && !ndecl->hasExternalFormalLinkage()) {
     auto& diags = context.getDiagnostics();
     if (cfg.WarnNoExternalFormalLinkage) {
@@ -60,21 +60,20 @@ bool ffi::ast_visitor::check_decl(const clang::Decl* decl) const {
     return false;
   }
   const auto& sm = context.getSourceManager();
-  auto ExpansionLoc = sm.getExpansionLoc(decl->getBeginLoc());
-  if (ExpansionLoc.isInvalid()) return false;
-  if (header_group) return !sm.isInSystemHeader(ExpansionLoc);
-  return sm.isInMainFile(ExpansionLoc);
+  const auto expansion_loc = sm.getExpansionLoc(decl->getBeginLoc());
+  if (expansion_loc.isInvalid()) return false;
+  if (header_group) return !sm.isInSystemHeader(expansion_loc);
+  return sm.isInMainFile(expansion_loc);
 }
 
 bool ffi::ast_visitor::check_extern_c(const clang::Decl& decl) const {
   using K = clang::Decl::Kind;
   const bool isDeclExternC = [&decl] {
     if (const auto k = decl.getKind(); k == K::Var)
-      return static_cast<const clang::VarDecl&>(decl).isExternC();
+      return llvm::cast<clang::VarDecl>(decl).isExternC();
     else if (k == K::Function)
-      return static_cast<const clang::FunctionDecl&>(decl).isExternC();
-    else
-      return true;
+      return llvm::cast<clang::FunctionDecl>(decl).isExternC();
+    return true;
   }();
   if (!isDeclExternC && !cfg.AssumeExternC && cfg.WarnNoCLinkage) {
     auto& diags = context.getDiagnostics();
@@ -82,14 +81,14 @@ bool ffi::ast_visitor::check_extern_c(const clang::Decl& decl) const {
         clang::DiagnosticsEngine::Warning,
         "declaration for entity '%0' is ignored, because it does not "
         "have a C language linkage.");
-    auto& ndecl = static_cast<const clang::NamedDecl&>(decl);
+    const auto& ndecl = llvm::cast<clang::NamedDecl>(decl);
     diags.Report(decl.getLocation(), id) << ndecl.getName();
   }
   return isDeclExternC;
 }
 
 void ffi::ast_visitor::match_translation_unit(
-    const clang::TranslationUnitDecl& decl, ModuleContents& mod) const {
+    const clang::TranslationUnitDecl& decl, module_contents& mod) const {
   for (auto d : decl.decls()) {
     if (!check_decl(d)) continue;
     if (auto entity = match_entity(*d); entity.has_value())
@@ -129,7 +128,7 @@ std::optional<ffi::tag_decl> ffi::ast_visitor::match_tag(
   }
 }
 
-std::optional<ffi::c_type> ffi::ast_visitor::match_type(
+std::optional<ffi::ctype> ffi::ast_visitor::match_type(
     const clang::NamedDecl& decl, const clang::Type& type) const {
   auto& sm = context.getSourceManager();
   auto& diags = context.getDiagnostics();
@@ -157,7 +156,8 @@ std::optional<ffi::c_type> ffi::ast_visitor::match_type(
       if (opaque.name.empty()) opaque.name = name;
     }
     return tk;
-  } else if (auto builtinType = type.getAs<clang::BuiltinType>()) {
+  }
+  if (auto builtinType = type.getAs<clang::BuiltinType>()) {
     const auto k = builtinType->getKind();
     auto tk = scalar_type::from_clang(k);
     if (!tk.has_value()) {
@@ -168,31 +168,35 @@ std::optional<ffi::c_type> ffi::ast_visitor::match_type(
       diags.Report(decl.getLocation(), id) << decl.getName() << name_of(k);
       return std::nullopt;
     }
-    return c_type{std::move(tk.value())};
-  } else if (auto pointerType = type.getAs<clang::PointerType>()) {
+    return ctype{std::move(tk.value())};
+  }
+  if (auto pointerType = type.getAs<clang::PointerType>()) {
     auto pointee = pointerType->getPointeeType();
     auto tk = match_type(decl, *pointee.getTypePtr());
     if (!tk.has_value()) return std::nullopt;
-    return c_type{
-        pointer_type{std::make_unique<c_type>(std::move(tk.value()))}};
-  } else if (auto refType = type.getAs<clang::ReferenceType>()) {
+    return ctype{pointer_type{std::make_unique<ctype>(std::move(tk.value()))}};
+  }
+  if (type.getAs<clang::ReferenceType>()) {
     const auto id = diags.getCustomDiagID(
         clang::DiagnosticsEngine::Warning,
         "declaration for entity '%0' involving C++ reference is ignored, "
         "because C++ references (lvalue, rvalue) are not supported.");
     diags.Report(decl.getLocation(), id) << decl.getName();
     return std::nullopt;
-  } else if (auto templType = type.getAs<clang::TemplateSpecializationType>()) {
+  }
+  if (auto templType = type.getAs<clang::TemplateSpecializationType>()) {
     auto templName = templType->getTemplateName();
     std::string typeName;
     llvm::raw_string_ostream os{typeName};
     templName.print(os, context.getPrintingPolicy());
-    return c_type{opaque_type{typeName}};
-  } else if (auto tagType = type.getAs<clang::TagType>()) {
+    return ctype{opaque_type{typeName}};
+  }
+  if (auto tagType = type.getAs<clang::TagType>()) {
     auto tagDecl = tagType->getDecl();
     auto tagName = tagDecl->getName();
-    return c_type{opaque_type{tagName}};
-  } else if (auto funcType = type.getAs<clang::FunctionProtoType>()) {
+    return ctype{opaque_type{tagName}};
+  }
+  if (auto funcType = type.getAs<clang::FunctionProtoType>()) {
     if (funcType->getCallConv() != clang::CC_C) {
       const auto id = diags.getCustomDiagID(
           clang::DiagnosticsEngine::Warning,
@@ -202,8 +206,7 @@ std::optional<ffi::c_type> ffi::ast_visitor::match_type(
       return std::nullopt;
     }
 
-    function_type func;
-
+    function_type func{};
     auto retType = match_type(decl, *funcType->getReturnType().getTypePtr());
     if (!retType.has_value()) {
       const auto id = diags.getCustomDiagID(
@@ -212,7 +215,7 @@ std::optional<ffi::c_type> ffi::ast_visitor::match_type(
       diags.Report(decl.getLocation(), id) << decl.getName();
       return std::nullopt;
     }
-    func.return_type = std::make_unique<c_type>(std::move(retType.value()));
+    func.return_type = std::make_unique<ctype>(std::move(retType.value()));
 
     auto paramCount = funcType->getNumParams();
     for (auto i = 0; i < paramCount; ++i) {
@@ -228,15 +231,15 @@ std::optional<ffi::c_type> ffi::ast_visitor::match_type(
       func.params.push_back({"", std::move(paramType.value())});
     }
 
-    return c_type{std::move(func)};
-  } else {
-    const auto id = diags.getCustomDiagID(
-        clang::DiagnosticsEngine::Warning,
-        "declaration for entity '%0' is ignored for no good reason, please "
-        "consider this as a bug, and report to the author.");
-    diags.Report(decl.getLocation(), id) << decl.getName();
-    return std::nullopt;
+    return ctype{std::move(func)};
   }
+
+  const auto id = diags.getCustomDiagID(
+      clang::DiagnosticsEngine::Warning,
+      "declaration for entity '%0' is ignored for no good reason, please "
+      "consider this as a bug, and report to the author.");
+  diags.Report(decl.getLocation(), id) << decl.getName();
+  return std::nullopt;
 }
 
 std::optional<ffi::entity> ffi::ast_visitor::match_var_raw(
@@ -279,17 +282,17 @@ std::optional<ffi::entity> ffi::ast_visitor::match_function(
     return std::nullopt;
   };
 
-  function_type func;
+  function_type func{};
   auto retType = match_type(decl, *decl.getReturnType().getTypePtr());
   if (!retType.has_value()) return reportNote();
-  func.return_type = std::make_unique<c_type>(std::move(retType.value()));
+  func.return_type = std::make_unique<ctype>(std::move(retType.value()));
   for (auto param : decl.parameters()) {
     auto var = match_param(*param);
     if (!var.has_value()) return reportNote();
     func.params.push_back(std::move(var.value()));
   }
 
-  return entity{std::move(name), c_type{std::move(func)}};
+  return entity{std::move(name), ctype{std::move(func)}};
 }
 
 std::optional<ffi::tag_decl> ffi::ast_visitor::match_enum(
@@ -318,7 +321,7 @@ std::optional<ffi::tag_decl> ffi::ast_visitor::match_enum(
     return std::nullopt;
   }
 
-  Enumeration enm;
+  enumeration enm;
   enm.underlying_type = std::move(type.value());
   for (auto item : decl.enumerators()) {
     auto itemName = item->getName();
@@ -345,7 +348,7 @@ std::optional<ffi::tag_decl> ffi::ast_visitor::match_struct(
     name = defName;
   }
 
-  Structure record;
+  structure record;
   for (auto f : decl.fields()) {
     auto type = match_type(*f, *f->getType().getTypePtr());
     if (!type.has_value()) return std::nullopt;
@@ -357,12 +360,12 @@ std::optional<ffi::tag_decl> ffi::ast_visitor::match_struct(
 
 std::optional<ffi::tag_decl> ffi::ast_visitor::match_typedef(
     const clang::TypedefNameDecl& decl) const {
-  auto& type = *decl.getUnderlyingType().getTypePtr();
-  auto name = decl.getName();
-  if (auto enumType = type.getAs<clang::EnumType>())
-    return match_enum(*enumType->getDecl(), name);
-  else if (auto structType = type.getAs<clang::RecordType>())
-    return match_struct(*structType->getDecl(), name);
+  const auto& type = *decl.getUnderlyingType().getTypePtr();
+  const auto name = decl.getName();
+  if (const auto enum_type = type.getAs<clang::EnumType>())
+    return match_enum(*enum_type->getDecl(), name);
+  if (const auto struct_type = type.getAs<clang::RecordType>())
+    return match_struct(*struct_type->getDecl(), name);
   return std::nullopt;
 }
 

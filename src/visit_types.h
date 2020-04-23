@@ -33,24 +33,30 @@ class ast_visitor {
               bool header_group)
       : header_group{header_group}, cfg{cfg}, context{context} {}
 
-  bool check_decl(const clang::Decl* decl) const;
-  bool check_extern_c(const clang::Decl& decl) const;
+  [[nodiscard]] bool check_decl(const clang::Decl* decl) const;
+  [[nodiscard]] bool check_extern_c(const clang::Decl& decl) const;
 
   void match_translation_unit(const clang::TranslationUnitDecl& decl,
-                              ModuleContents& mod) const;
-  std::optional<entity> match_entity(const clang::Decl& decl) const;
-  std::optional<tag_decl> match_tag(const clang::Decl& decl) const;
-  std::optional<c_type> match_type(const clang::NamedDecl& decl,
-                                   const clang::Type& type) const;
-  std::optional<entity> match_var_raw(const clang::VarDecl& decl) const;
-  std::optional<entity> match_var(const clang::VarDecl& decl) const;
-  std::optional<entity> match_param(const clang::ParmVarDecl& param) const;
-  std::optional<entity> match_function(const clang::FunctionDecl& decl) const;
-  std::optional<tag_decl> match_enum(const clang::EnumDecl& decl,
-                                     llvm::StringRef defName = {}) const;
-  std::optional<tag_decl> match_struct(const clang::RecordDecl& decl,
-                                       llvm::StringRef defName = {}) const;
-  std::optional<tag_decl> match_typedef(
+                              module_contents& mod) const;
+  [[nodiscard]] std::optional<entity> match_entity(
+      const clang::Decl& decl) const;
+  [[nodiscard]] std::optional<tag_decl> match_tag(
+      const clang::Decl& decl) const;
+  [[nodiscard]] std::optional<ctype> match_type(const clang::NamedDecl& decl,
+                                                const clang::Type& type) const;
+  [[nodiscard]] std::optional<entity> match_var_raw(
+      const clang::VarDecl& decl) const;
+  [[nodiscard]] std::optional<entity> match_var(
+      const clang::VarDecl& decl) const;
+  [[nodiscard]] std::optional<entity> match_param(
+      const clang::ParmVarDecl& param) const;
+  [[nodiscard]] std::optional<entity> match_function(
+      const clang::FunctionDecl& decl) const;
+  [[nodiscard]] std::optional<tag_decl> match_enum(
+      const clang::EnumDecl& decl, llvm::StringRef defName = {}) const;
+  [[nodiscard]] std::optional<tag_decl> match_struct(
+      const clang::RecordDecl& decl, llvm::StringRef defName = {}) const;
+  [[nodiscard]] std::optional<tag_decl> match_typedef(
       const clang::TypedefNameDecl& decl) const;
 
  private:

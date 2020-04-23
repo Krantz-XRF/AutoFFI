@@ -26,7 +26,7 @@
 #include "module.h"
 
 namespace ffi {
-using module_list = std::map<std::string, ffi::ModuleContents>;
+using module_list = std::map<std::string, ffi::module_contents>;
 
 struct ffi_driver final : clang::tooling::FrontendActionFactory {
   clang::FrontendAction* create() override;
@@ -48,12 +48,12 @@ class info_collect_action final : public clang::ASTFrontendAction {
 class info_collector final : public clang::ASTConsumer {
  public:
   info_collector(config::config& cfg, std::string_view file_name,
-                 ModuleContents& current_module);
+                 module_contents& current_module);
   void HandleTranslationUnit(clang::ASTContext& context) override;
 
  private:
   config::config& cfg;
   std::string_view file_name;
-  ModuleContents& current_module;
+  module_contents& current_module;
 };
 }  // namespace ffi

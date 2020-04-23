@@ -40,12 +40,12 @@ std::unique_ptr<clang::ASTConsumer> ffi::info_collect_action::CreateASTConsumer(
 
 ffi::info_collector::info_collector(config::config& cfg,
                                     std::string_view file_name,
-                                    ModuleContents& current_module)
+                                    module_contents& current_module)
     : cfg{cfg}, file_name{file_name}, current_module{current_module} {}
 
 void ffi::info_collector::HandleTranslationUnit(clang::ASTContext& context) {
-  const auto pdecl = context.getTranslationUnitDecl();
-  const bool is_hg = cfg.IsHeaderGroup.cend() !=
+  auto* const pdecl = context.getTranslationUnitDecl();
+  const auto is_hg = cfg.IsHeaderGroup.cend() !=
                      std::find(cfg.IsHeaderGroup.cbegin(),
                                cfg.IsHeaderGroup.cend(), file_name);
   ast_visitor{cfg, context, is_hg}.match_translation_unit(*pdecl,

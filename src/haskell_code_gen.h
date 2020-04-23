@@ -27,7 +27,7 @@ class haskell_code_gen {
  public:
   explicit haskell_code_gen(config::config& cfg) : cfg{cfg} {}
 
-  void gen_module(const std::string& name, const ModuleContents& mod) noexcept;
+  void gen_module(const std::string& name, const module_contents& mod) noexcept;
   void gen_module_prefix() noexcept;
   void gen_module_name(const std::string& name) noexcept;
 
@@ -35,29 +35,29 @@ class haskell_code_gen {
   void gen_type_name(const std::string& name) noexcept;
   void gen_const_name(const std::string& name) noexcept;
 
-  void gen_entity_raw(const std::string& name, const c_type& type) noexcept;
+  void gen_entity_raw(const std::string& name, const ctype& type) noexcept;
   void gen_entity(const_entity& entity) noexcept;
-  void gen_type(const c_type& type, bool paren = false) noexcept;
+  void gen_type(const ctype& type, bool paren = false) noexcept;
   void gen_function_type(const function_type& func) noexcept;
   void gen_scalar_type(const scalar_type& scalar) noexcept;
   void gen_opaque_type(const opaque_type& opaque) noexcept;
   void gen_pointer_type(const pointer_type& pointer) noexcept;
 
   void gen_tag(const std::string& name, const tag_type& tag) noexcept;
-  void gen_enum(const std::string& name, const Enumeration& enm) noexcept;
+  void gen_enum(const std::string& name, const enumeration& enm) noexcept;
   void gen_enum_item(const std::string& name, const std::string& item,
                      intmax_t val) noexcept;
-  void gen_struct(const std::string& name, const Structure& str) noexcept;
+  void gen_struct(const std::string& name, const structure& str) noexcept;
 
   void clear_fresh_variable() noexcept;
   std::string next_fresh_variable() noexcept;
 
   static bool requires_paren(int tid) noexcept;
 
-  static bool is_cchar(const c_type& type) noexcept;
-  static bool is_cstring(const c_type& type) noexcept;
-  static bool is_void(const c_type& type) noexcept;
-  static bool is_function(const c_type& type) noexcept;
+  static bool is_cchar(const ctype& type) noexcept;
+  static bool is_cstring(const ctype& type) noexcept;
+  static bool is_void(const ctype& type) noexcept;
+  static bool is_function(const ctype& type) noexcept;
 
  private:
   config::config& cfg;

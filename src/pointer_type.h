@@ -20,8 +20,8 @@
 #include <memory>
 
 namespace ffi {
-struct c_type;
+struct ctype;
 struct pointer_type {
-  std::unique_ptr<c_type> pointee;
+  std::unique_ptr<ctype> pointee;
 };
 }  // namespace ffi
