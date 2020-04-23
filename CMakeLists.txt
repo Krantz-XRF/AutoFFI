@@ -6,17 +6,24 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project("AutoFFI")
 
+# LLVM/Clang dependency
 find_package(LLVM REQUIRED)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in ${LLVM_DIR}")
 find_package(Clang REQUIRED)
 message(STATUS "Using ClangConfig.cmake in ${Clang_DIR}")
+
 # Use this fmt library in place of C++20 std::format
 find_package(fmt 6 REQUIRED)
+
+# Use Microsoft.GSL
+add_subdirectory(GSL)
 
 add_executable(AutoFFI)
 add_subdirectory(src)
 
 target_include_directories(AutoFFI SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS})
 target_link_directories(AutoFFI PRIVATE ${LLVM_LIBRARY_DIRS})
-target_link_libraries(AutoFFI PRIVATE clangTooling clangBasic clangASTMatchers fmt::fmt)
+target_link_libraries(AutoFFI PRIVATE
+  clangTooling clangBasic clangASTMatchers
+  fmt::fmt Microsoft.GSL::GSL)
