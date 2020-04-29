@@ -31,9 +31,9 @@ namespace {
 auto name_break(std::string_view input) noexcept
     -> std::optional<std::pair<std::string_view, std::string_view>> {
   if (input.empty()) return std::nullopt;
-  const auto p1 = std::find_if(next(begin(input)), end(input), isupper);
+  const auto p1 = std::find_if(std::next(begin(input)), end(input), isupper);
   const auto p2 = std::find_if_not(begin(input), end(input), isalnum);
-  const auto d = min(p1, p2) - begin(input);
+  const auto d = std::min(p1, p2) - begin(input);
   const auto p_rest = d + (p1 > p2);
   return std::pair{input.substr(0, d), input.substr(p_rest)};
 }
