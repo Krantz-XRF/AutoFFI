@@ -21,14 +21,15 @@
 
 void ffi::haskell_code_gen::gen_module(const std::string& name,
                                        const module_contents& mod) noexcept {
-  if (auto p = cfg.FileMarshallers.find(name); p != cfg.FileMarshallers.cend())
-    cfg.Marshaller.forward_marshaller = &p->second;
+  if (auto p = cfg.file_name_converters.find(name);
+      p != cfg.file_name_converters.cend())
+    cfg.converters.for_all.forward_converter = &p->second;
   else
-    cfg.Marshaller.forward_marshaller = nullptr;
+    cfg.converters.for_all.forward_converter = nullptr;
 
-  auto mname = cfg.ModuleMarshaller.transform(name);
-  auto parent_dir = format(FMT_STRING("{}/{}/LowLevel"), cfg.OutputDirectory,
-                           cfg.LibraryName);
+  auto mname = cfg.converters.for_module.convert(name);
+  auto parent_dir = format(FMT_STRING("{}/{}/LowLevel"), cfg.output_directory,
+                           cfg.library_name);
   auto mod_file = format(FMT_STRING("{}/{}.hs"), parent_dir, mname);
   llvm::sys::fs::create_directories(parent_dir);
   std::error_code ec;
@@ -62,11 +63,11 @@ void ffi::haskell_code_gen::gen_module(const std::string& name,
 }
 
 void ffi::haskell_code_gen::gen_module_prefix() noexcept {
-  *os << cfg.LibraryName << ".LowLevel.";
+  *os << cfg.library_name << ".LowLevel.";
 }
 
 void ffi::haskell_code_gen::gen_module_name(const std::string& name) noexcept {
-  *os << cfg.ModuleMarshaller.transform(name);
+  *os << cfg.converters.for_module.convert(name);
 }
 
 void ffi::haskell_code_gen::gen_entity_raw(const std::string& name,
@@ -84,15 +85,15 @@ void ffi::haskell_code_gen::gen_entity(const_entity& entity) noexcept {
 }
 
 void ffi::haskell_code_gen::gen_func_name(const std::string& name) noexcept {
-  *os << cfg.VarMarshaller.transform(name);
+  *os << cfg.converters.for_var.convert(name);
 }
 
 void ffi::haskell_code_gen::gen_type_name(const std::string& name) noexcept {
-  *os << cfg.TypeMarshaller.transform(name);
+  *os << cfg.converters.for_type.convert(name);
 }
 
 void ffi::haskell_code_gen::gen_const_name(const std::string& name) noexcept {
-  *os << cfg.ConstMarshaller.transform(name);
+  *os << cfg.converters.for_ctor.convert(name);
 }
 
 void ffi::haskell_code_gen::gen_type(const ctype& type, bool paren) noexcept {

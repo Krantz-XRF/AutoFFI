@@ -25,8 +25,8 @@
 
 #include "config.h"
 #include "function_type.h"
-#include "marshaller.h"
 #include "module.h"
+#include "name_converter.h"
 #include "opaque_type.h"
 #include "pointer_type.h"
 #include "prim_types.h"
@@ -155,68 +155,66 @@ struct llvm::yaml::CustomMappingTraits<std::map<std::string, T>> {
 };
 
 template <>
-struct llvm::yaml::ScalarEnumerationTraits<ffi::marshaller::Case> {
-  static void enumeration(IO& io, ffi::marshaller::Case& c) {
-    io.enumCase(c, "snake_case", ffi::marshaller::Case_snake_case);
-    io.enumCase(c, "Snake_case", ffi::marshaller::Case_Snake_case);
-    io.enumCase(c, "SNAKE_CASE", ffi::marshaller::Case_SNAKE_CASE);
-    io.enumCase(c, "camelCase", ffi::marshaller::Case_camelCase);
-    io.enumCase(c, "PascalCase", ffi::marshaller::Case_PascalCase);
-    io.enumCase(c, "preserve", ffi::marshaller::Case_preserve);
+struct llvm::yaml::ScalarEnumerationTraits<ffi::name_case> {
+  static void enumeration(IO& io, ffi::name_case& c) {
+    io.enumCase(c, "preserving", ffi::name_case::preserving);
+    io.enumCase(c, "CamelCase", ffi::name_case::camel);
+    io.enumCase(c, "Snake_Case_Init_Upper", ffi::name_case::snake_init_upper);
+    io.enumCase(c, "snake_case_all_lower", ffi::name_case::snake_all_lower);
+    io.enumCase(c, "SNAKE_CASE_ALL_UPPER", ffi::name_case::snake_all_upper);
   }
 };
 
 template <>
-struct llvm::yaml::MappingTraits<ffi::marshaller> {
-  static void mapping(IO& io, ffi::marshaller& m) {
-    io.mapOptional("removePrefix", m.remove_prefix);
-    io.mapOptional("removeSuffix", m.remove_suffix);
-    io.mapOptional("addPrefix", m.add_prefix);
-    io.mapOptional("addSuffix", m.add_suffix);
-    io.mapOptional("outputCase", m.output_case);
+struct llvm::yaml::ScalarEnumerationTraits<ffi::name_variant> {
+  static void enumeration(IO& io, ffi::name_variant& c) {
+    io.enumCase(c, "preserving", ffi::name_variant::preserving);
+    io.enumCase(c, "module_name", ffi::name_variant::module_name);
+    io.enumCase(c, "type_ctor", ffi::name_variant::type_ctor);
+    io.enumCase(c, "data_ctor", ffi::name_variant::data_ctor);
+    io.enumCase(c, "variable", ffi::name_variant::variable);
   }
 };
 
 template <>
-struct llvm::yaml::MappingTraits<config::config> {
-  static void mapping(IO& io, config::config& cfg) {
-#define FIELD_OPTIONAL(Type, Field, Default) io.mapOptional(#Field, cfg.Field);
-#define FIELD_REQUIRED(Type, Field, Default) io.mapRequired(#Field, cfg.Field);
-#include "config.def"
+struct llvm::yaml::MappingTraits<ffi::name_converter> {
+  static void mapping(IO& io, ffi::name_converter& m) {
+    io.mapOptional("remove_prefix", m.remove_prefix);
+    io.mapOptional("remove_suffix", m.remove_suffix);
+    io.mapOptional("add_prefix", m.add_prefix);
+    io.mapOptional("add_suffix", m.add_suffix);
+    io.mapOptional("output_case", m.output_case);
+    io.mapOptional("output_variant", m.output_variant);
   }
-  static StringRef validate(IO& io, config::config& cfg) {
-    using Case = ffi::marshaller::Case;
-    if (cfg.Marshaller.output_case != ffi::marshaller::Case_preserve ||
-        !cfg.Marshaller.add_prefix.empty())
-      return "The universal marshaller should not specify a case or add "
-             "a prefix, for modules, types and functions require "
-             "different cases.";
-    else if (!std::all_of(cfg.FileMarshallers.cbegin(),
-                          cfg.FileMarshallers.cend(), [](const auto& m) {
-                            return m.second.output_case ==
-                                       ffi::marshaller::Case_preserve &&
-                                   m.second.add_prefix.empty();
-                          }))
-      return "The file marshallers should not specify a case or add a "
-             "prefix, for modules, types and functions require different "
-             "cases.";
-    else if (!cfg.ModuleMarshaller.is_type_case())
-      return "The module marshaller should produce a name beginning with "
-             "an upper case letter.";
-    else if (!cfg.ConstMarshaller.is_type_case())
-      return "The constructor marshaller should produce a name beginning "
-             "with an upper case letter.";
-    else if (!cfg.TypeMarshaller.is_type_case())
-      return "The type marshaller should produce a name beginning with "
-             "an upper case letter.";
-    else if (!cfg.VarMarshaller.is_func_case())
-      return "The variable marshaller should produce a name beginning "
-             "with a lower case letter or '_'.";
-    cfg.Marshaller.afterward = true;
-    cfg.ModuleMarshaller.forward_marshaller = &cfg.Marshaller;
-    cfg.TypeMarshaller.forward_marshaller = &cfg.Marshaller;
-    cfg.ConstMarshaller.forward_marshaller = &cfg.Marshaller;
-    cfg.VarMarshaller.forward_marshaller = &cfg.Marshaller;
-    return StringRef{};
+};
+
+template <>
+struct llvm::yaml::MappingTraits<ffi::name_converter_bundle> {
+  static void mapping(IO& io, ffi::name_converter_bundle& bundle) {
+    io.mapOptional("all", bundle.for_all);
+    io.mapOptional("module", bundle.for_module);
+    io.mapOptional("type", bundle.for_type);
+    io.mapOptional("ctor", bundle.for_ctor);
+    io.mapOptional("var", bundle.for_var);
+  }
+};
+
+template <>
+struct llvm::yaml::MappingTraits<ffi::config> {
+  static void mapping(IO& io, ffi::config& cfg) {
+    io.mapOptional("allow_custom_fixed_size_int",
+                   cfg.allow_custom_fixed_size_int);
+    io.mapOptional("assume_extern_c", cfg.assume_extern_c);
+    io.mapOptional("warn_no_c_linkage", cfg.warn_no_c_linkage);
+    io.mapOptional("warn_no_external_formal_linkage",
+                   cfg.warn_no_external_formal_linkage);
+    io.mapOptional("name_converters", cfg.converters);
+    io.mapOptional("file_name_converters", cfg.file_name_converters);
+    io.mapOptional("library_name", cfg.library_name);
+    io.mapOptional("root_directory", cfg.root_directory);
+    io.mapOptional("output_directory", cfg.output_directory);
+    io.mapOptional("file_names", cfg.file_names);
+    io.mapOptional("is_header_group", cfg.is_header_group);
+    io.mapOptional("compiler_options", cfg.compiler_options);
   }
 };

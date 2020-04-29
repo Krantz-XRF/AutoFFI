@@ -29,7 +29,7 @@
 namespace ffi {
 class ast_visitor {
  public:
-  ast_visitor(config::config& cfg, clang::ASTContext& context,
+  ast_visitor(ffi::config& cfg, clang::ASTContext& context,
               bool header_group)
       : header_group{header_group}, cfg{cfg}, context{context} {}
 
@@ -61,7 +61,7 @@ class ast_visitor {
 
  private:
   bool header_group;
-  config::config& cfg;
+  ffi::config& cfg;
   clang::ASTContext& context;
 };
 }  // namespace ffi

@@ -17,11 +17,30 @@
 
 #pragma once
 
-#include "marshaller.h"
+#include "name_converter.h"
 
-namespace config {
-struct config {
-#define FIELD(Type, Field, Default) Type Field{Default};
-#include "config.def"
+namespace ffi {
+struct name_converter_bundle {
+  using cvt = name_converter;
+  cvt for_all{name_case::preserving, name_variant::preserving, nullptr, true};
+  cvt for_module{name_case::camel, name_variant::module_name, &for_all};
+  cvt for_type{name_case::camel, name_variant::type_ctor, &for_all};
+  cvt for_ctor{name_case::camel, name_variant::data_ctor, &for_all};
+  cvt for_var{name_case::camel, name_variant::variable, &for_all};
 };
-}  // namespace config
+
+struct config {
+  bool allow_custom_fixed_size_int{false};
+  bool assume_extern_c{false};
+  bool warn_no_c_linkage{true};
+  bool warn_no_external_formal_linkage{false};
+  name_converter_bundle converters;
+  name_converter_map file_name_converters{};
+  std::string library_name{"Library"};
+  std::string root_directory{};
+  std::string output_directory{};
+  std::vector<std::string> file_names{};
+  std::vector<std::string> is_header_group{};
+  std::vector<std::string> compiler_options{};
+};
+}  // namespace ffi

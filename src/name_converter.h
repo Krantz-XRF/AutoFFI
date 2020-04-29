@@ -22,38 +22,34 @@
 #include <string_view>
 
 namespace ffi {
-struct marshaller {
-  enum Case {
-    Case_snake_case,
-    Case_Snake_case,
-    Case_SNAKE_CASE,
-    Case_camelCase,
-    Case_PascalCase,
-    Case_preserve,
-  };
+enum class name_case : uint8_t {
+  preserving,
+  camel,
+  snake_all_lower,
+  snake_init_upper,
+  snake_all_upper,
+};
 
-  using pss = std::pair<std::string_view, std::string_view>;
-  static pss from_snake_case(std::string_view);
-  static pss from_CamelCase(std::string_view);
+enum class name_variant : uint8_t {
+  preserving,
+  variable,
+  module_name,
+  type_ctor,
+  data_ctor,
+};
 
-  static void to_snake_case(std::string&, std::string_view);
-  static void to_SNAKE_CASE(std::string&, std::string_view);
-  static void to_PascalCase(std::string&, std::string_view);
-
-  [[nodiscard]] bool is_type_case() const;
-  [[nodiscard]] bool is_func_case() const;
-
-  Case output_case{Case_preserve};
+struct name_converter {
+  name_case output_case{name_case::preserving};
+  name_variant output_variant{name_variant::preserving};
+  name_converter* forward_converter{nullptr};
+  bool afterward{false};
   std::string remove_prefix;
   std::string remove_suffix;
   std::string add_prefix;
   std::string add_suffix;
-  marshaller* forward_marshaller{nullptr};
-  bool afterward{false};
 
-  [[nodiscard]] std::string transform_raw(std::string_view) const;
-  [[nodiscard]] std::string transform(std::string_view) const;
+  [[nodiscard]] std::string convert(std::string_view) const noexcept;
 };
 
-using marshaller_map = std::map<std::string, marshaller>;
+using name_converter_map = std::map<std::string, name_converter>;
 }  // namespace ffi

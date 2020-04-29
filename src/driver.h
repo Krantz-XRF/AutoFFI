@@ -30,29 +30,29 @@ using module_list = std::map<std::string, ffi::module_contents>;
 
 struct ffi_driver final : clang::tooling::FrontendActionFactory {
   clang::FrontendAction* create() override;
-  config::config cfg;
+  ffi::config cfg;
   module_list modules;
 };
 
 class info_collect_action final : public clang::ASTFrontendAction {
  public:
-  info_collect_action(config::config& cfg, module_list& modules);
+  info_collect_action(ffi::config& cfg, module_list& modules);
   std::unique_ptr<clang::ASTConsumer> CreateASTConsumer(
       clang::CompilerInstance& compiler, llvm::StringRef in_file) override;
 
  private:
-  config::config& cfg;
+  ffi::config& cfg;
   module_list& modules;
 };
 
 class info_collector final : public clang::ASTConsumer {
  public:
-  info_collector(config::config& cfg, std::string_view file_name,
+  info_collector(ffi::config& cfg, std::string_view file_name,
                  module_contents& current_module);
   void HandleTranslationUnit(clang::ASTContext& context) override;
 
  private:
-  config::config& cfg;
+  ffi::config& cfg;
   std::string_view file_name;
   module_contents& current_module;
 };

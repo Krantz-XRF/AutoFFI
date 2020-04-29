@@ -103,15 +103,15 @@ int main(int argc, const char* argv[]) {
     // Load CWD
     llvm::SmallString<128> current_path;
     llvm::sys::fs::current_path(current_path);
-    if (!driver.cfg.RootDirectory.empty())
-      llvm::sys::fs::set_current_path(driver.cfg.RootDirectory);
+    if (!driver.cfg.root_directory.empty())
+      llvm::sys::fs::set_current_path(driver.cfg.root_directory);
 
     // Compiler options
     clang::tooling::FixedCompilationDatabase compilations{
-        driver.cfg.RootDirectory.empty() ? "." : driver.cfg.RootDirectory,
-        driver.cfg.CompilerOptions};
+        driver.cfg.root_directory.empty() ? "." : driver.cfg.root_directory,
+        driver.cfg.compiler_options};
 
-    clang::tooling::ClangTool tool{compilations, driver.cfg.FileNames};
+    clang::tooling::ClangTool tool{compilations, driver.cfg.file_names};
 
     if (const auto status = tool.run(&driver)) return status;
 

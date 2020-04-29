@@ -50,7 +50,7 @@ bool ffi::ast_visitor::check_decl(const clang::Decl* decl) const {
   if (const auto ndecl = llvm::dyn_cast<clang::NamedDecl>(decl);
       ndecl && !ndecl->hasExternalFormalLinkage()) {
     auto& diags = context.getDiagnostics();
-    if (cfg.WarnNoExternalFormalLinkage) {
+    if (cfg.warn_no_external_formal_linkage) {
       const auto id = diags.getCustomDiagID(
           clang::DiagnosticsEngine::Warning,
           "declaration for entity '%0' is ignored, because it does not "
@@ -75,7 +75,7 @@ bool ffi::ast_visitor::check_extern_c(const clang::Decl& decl) const {
       return llvm::cast<clang::FunctionDecl>(decl).isExternC();
     return true;
   }();
-  if (!isDeclExternC && !cfg.AssumeExternC && cfg.WarnNoCLinkage) {
+  if (!isDeclExternC && !cfg.assume_extern_c && cfg.warn_no_c_linkage) {
     auto& diags = context.getDiagnostics();
     const auto id = diags.getCustomDiagID(
         clang::DiagnosticsEngine::Warning,
@@ -147,7 +147,7 @@ std::optional<ffi::ctype> ffi::ast_visitor::match_type(
     if (std::holds_alternative<scalar_type>(resVal)) {
       auto name = typeDecl->getName().str();
       if (sm.isInSystemHeader(typeDecl->getLocation()) ||
-          cfg.AllowCustomFixedSizeInt)
+          cfg.allow_custom_fixed_size_int)
         if (auto tn = scalar_type::from_name(name); tn.has_value())
           tk = {tn.value()};
     } else if (std::holds_alternative<opaque_type>(resVal)) {

@@ -25,29 +25,29 @@ clang::FrontendAction* ffi::ffi_driver::create() {
   return new info_collect_action{cfg, modules};
 }
 
-ffi::info_collect_action::info_collect_action(config::config& cfg,
+ffi::info_collect_action::info_collect_action(ffi::config& cfg,
                                               module_list& modules)
     : cfg{cfg}, modules{modules} {}
 
 std::unique_ptr<clang::ASTConsumer> ffi::info_collect_action::CreateASTConsumer(
     clang::CompilerInstance& compiler, llvm::StringRef in_file) {
   llvm::SmallString<0> path{in_file.begin(), in_file.end()};
-  llvm::sys::path::replace_path_prefix(path, cfg.RootDirectory, "");
+  llvm::sys::path::replace_path_prefix(path, cfg.root_directory, "");
   auto file = llvm::sys::path::relative_path(path.str()).str();
   auto [p, inserted] = modules.try_emplace(file.data());
   return std::make_unique<info_collector>(cfg, p->first, p->second);
 }
 
-ffi::info_collector::info_collector(config::config& cfg,
+ffi::info_collector::info_collector(ffi::config& cfg,
                                     std::string_view file_name,
                                     module_contents& current_module)
     : cfg{cfg}, file_name{file_name}, current_module{current_module} {}
 
 void ffi::info_collector::HandleTranslationUnit(clang::ASTContext& context) {
   auto* const pdecl = context.getTranslationUnitDecl();
-  const auto is_hg = cfg.IsHeaderGroup.cend() !=
-                     std::find(cfg.IsHeaderGroup.cbegin(),
-                               cfg.IsHeaderGroup.cend(), file_name);
+  const auto is_hg = cfg.is_header_group.cend() !=
+                     std::find(cfg.is_header_group.cbegin(),
+                               cfg.is_header_group.cend(), file_name);
   ast_visitor{cfg, context, is_hg}.match_translation_unit(*pdecl,
                                                           current_module);
 }
