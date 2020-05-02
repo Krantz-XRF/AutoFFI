@@ -21,6 +21,7 @@
 #include <cctype>
 #include <optional>
 
+#include <fmt/format.h>
 #include <gsl/gsl_assert>
 #include <gsl/gsl_util>
 
@@ -78,13 +79,23 @@ std::string case_convert(std::string_view name, name_case c, name_variant v) {
 }  // namespace
 
 std::string ffi::name_converter::convert(std::string_view s) const noexcept {
-  if (forward_converter && afterward) {
-    const auto r = case_convert(s, output_case, output_variant);
-    return forward_converter->convert(r);
-  }
-  if (forward_converter && !afterward) {
-    const auto r = forward_converter->convert(s);
-    return case_convert(r, output_case, output_variant);
-  }
-  return case_convert(s, output_case, output_variant);
+  // remove prefix
+  if (auto [p1, p2] = std::mismatch(begin(remove_prefix), end(remove_prefix),
+                                    begin(s), end(s));
+      p1 == end(remove_prefix))
+    s.remove_prefix(remove_prefix.length());
+  // remove suffix
+  if (auto [p1, p2] = std::mismatch(rbegin(remove_prefix), rend(remove_prefix),
+                                    rbegin(s), rend(s));
+      p1 == rend(remove_prefix))
+    s.remove_suffix(remove_suffix.length());
+  // add prefix/suffix
+  std::string buffer = format(FMT_STRING("{}{}{}"), add_prefix, s, add_suffix);
+  // convert
+  if (forward_converter && !afterward)
+    buffer = forward_converter->convert(buffer);
+  buffer = case_convert(buffer, output_case, output_variant);
+  if (forward_converter && afterward) return forward_converter->convert(buffer);
+  // result
+  return buffer;
 }
