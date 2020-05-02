@@ -35,7 +35,8 @@ class haskell_code_gen {
   void gen_type_name(const std::string& name) noexcept;
   void gen_const_name(const std::string& name) noexcept;
 
-  void gen_entity_raw(const std::string& name, const ctype& type) noexcept;
+  void gen_entity_raw(const std::string& name, const ctype& type,
+                      bool use_forall = false) noexcept;
   void gen_entity(const_entity& entity) noexcept;
   void gen_type(const ctype& type, bool paren = false) noexcept;
   void gen_function_type(const function_type& func) noexcept;
@@ -58,6 +59,24 @@ class haskell_code_gen {
   static bool is_cstring(const ctype& type) noexcept;
   static bool is_void(const ctype& type) noexcept;
   static bool is_function(const ctype& type) noexcept;
+
+ protected:
+  class explicit_for_all_handler {
+   public:
+    explicit explicit_for_all_handler(haskell_code_gen& g);
+    ~explicit_for_all_handler();
+
+    haskell_code_gen* operator->() const;
+
+   private:
+    haskell_code_gen& code_gen;
+    std::string buffer;
+    llvm::raw_string_ostream os;
+    llvm::raw_ostream* backup_os;
+    bool backup_void_ptr_as_any_ptr;
+  };
+
+  explicit_for_all_handler explicit_for_all();
 
  private:
   config& cfg;

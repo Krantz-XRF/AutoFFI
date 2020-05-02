@@ -42,8 +42,9 @@ void ffi::haskell_code_gen::gen_module(const std::string& name,
 
   *os << "{-# LANGUAGE EmptyDataDecls #-}\n"
          "{-# LANGUAGE ForeignFunctionInterface #-}\n"
-         "{-# LANGUAGE PatternSynonyms #-}\n"
-         "{-# OPTIONS_GHC -Wno-missing-pattern-synonym-signatures #-}\n"
+         "{-# LANGUAGE PatternSynonyms #-}\n";
+  if (cfg.allow_rank_n_types) *os << "{-# LANGUAGE RankNTypes #-}\n";
+  *os << "{-# OPTIONS_GHC -Wno-missing-pattern-synonym-signatures #-}\n"
          "{-# OPTIONS_GHC -Wno-unused-imports #-}\n";
   *os << "module ";
   gen_module_prefix();
@@ -71,11 +72,15 @@ void ffi::haskell_code_gen::gen_module_name(const std::string& name) noexcept {
 }
 
 void ffi::haskell_code_gen::gen_entity_raw(const std::string& name,
-                                           const ctype& type) noexcept {
-  clear_fresh_variable();
+                                           const ctype& type,
+                                           bool use_forall) noexcept {
   gen_func_name(name);
   *os << " :: ";
-  gen_type(type);
+  clear_fresh_variable();
+  if (use_forall)
+    explicit_for_all()->gen_type(type);
+  else
+    gen_type(type);
   *os << '\n';
 }
 
@@ -142,7 +147,7 @@ void ffi::haskell_code_gen::gen_pointer_type(
     *os << "FunPtr ";
   else
     *os << "Ptr ";
-  if (is_void(pointee))
+  if (is_void(pointee) && cfg.void_ptr_as_any_ptr)
     *os << next_fresh_variable();
   else
     gen_type(pointee, true);
@@ -192,7 +197,7 @@ void ffi::haskell_code_gen::gen_struct(const std::string& name,
     *os << "\n  { ";
     auto f = begin(str.fields);
     while (true) {
-      gen_entity_raw(f->first, f->second);
+      gen_entity_raw(f->first, f->second, true);
       if (++f == end(str.fields)) break;
       *os << "  , ";
     }
@@ -246,4 +251,41 @@ bool ffi::haskell_code_gen::is_void(const ctype& type) noexcept {
 
 bool ffi::haskell_code_gen::is_function(const ctype& type) noexcept {
   return std::holds_alternative<function_type>(type.value);
+}
+
+auto ffi::haskell_code_gen::explicit_for_all() -> explicit_for_all_handler {
+  return explicit_for_all_handler{*this};
+}
+
+ffi::haskell_code_gen::explicit_for_all_handler::explicit_for_all_handler(
+    haskell_code_gen& g)
+    : code_gen{g},
+      os{buffer},
+      backup_os{g.os},
+      backup_void_ptr_as_any_ptr{g.cfg.void_ptr_as_any_ptr} {
+  if (g.cfg.void_ptr_as_any_ptr)
+    g.cfg.void_ptr_as_any_ptr = g.cfg.allow_rank_n_types;
+  g.os = &os;
+}
+
+ffi::haskell_code_gen::explicit_for_all_handler::~explicit_for_all_handler() {
+  if (!code_gen.fresh_variable.empty()) {
+    *backup_os << "forall ";
+    const auto last_fresh_var = std::move(code_gen.fresh_variable);
+    code_gen.clear_fresh_variable();
+    while (true) {
+      auto x = code_gen.next_fresh_variable();
+      *backup_os << x << ' ';
+      if (x == last_fresh_var) break;
+    }
+    *backup_os << ". ";
+  }
+  *backup_os << os.str();
+  code_gen.os = backup_os;
+  code_gen.cfg.void_ptr_as_any_ptr = backup_void_ptr_as_any_ptr;
+}
+
+auto ffi::haskell_code_gen::explicit_for_all_handler::operator->() const
+    -> haskell_code_gen* {
+  return &code_gen;
 }
