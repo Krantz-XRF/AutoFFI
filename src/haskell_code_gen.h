@@ -25,7 +25,7 @@
 namespace ffi {
 class haskell_code_gen {
  public:
-  explicit haskell_code_gen(ffi::config& cfg) : cfg{cfg} {}
+  explicit haskell_code_gen(config& cfg) : cfg{cfg} {}
 
   void gen_module(const std::string& name, const module_contents& mod) noexcept;
   void gen_module_prefix() noexcept;
@@ -60,7 +60,7 @@ class haskell_code_gen {
   static bool is_function(const ctype& type) noexcept;
 
  private:
-  ffi::config& cfg;
+  config& cfg;
   llvm::raw_ostream* os{nullptr};
   std::string fresh_variable;
 };

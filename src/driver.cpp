@@ -25,8 +25,7 @@ clang::FrontendAction* ffi::ffi_driver::create() {
   return new info_collect_action{cfg, modules};
 }
 
-ffi::info_collect_action::info_collect_action(ffi::config& cfg,
-                                              module_list& modules)
+ffi::info_collect_action::info_collect_action(config& cfg, module_list& modules)
     : cfg{cfg}, modules{modules} {}
 
 std::unique_ptr<clang::ASTConsumer> ffi::info_collect_action::CreateASTConsumer(
@@ -38,8 +37,7 @@ std::unique_ptr<clang::ASTConsumer> ffi::info_collect_action::CreateASTConsumer(
   return std::make_unique<info_collector>(cfg, p->first, p->second);
 }
 
-ffi::info_collector::info_collector(ffi::config& cfg,
-                                    std::string_view file_name,
+ffi::info_collector::info_collector(config& cfg, std::string_view file_name,
                                     module_contents& current_module)
     : cfg{cfg}, file_name{file_name}, current_module{current_module} {}
 

@@ -296,21 +296,21 @@ std::optional<ffi::entity> ffi::ast_visitor::match_function(
 }
 
 std::optional<ffi::tag_decl> ffi::ast_visitor::match_enum(
-    const clang::EnumDecl& decl, llvm::StringRef defName) const {
+    const clang::EnumDecl& decl, llvm::StringRef def_name) const {
   auto& diags = context.getDiagnostics();
 
   auto name = decl.getName();
   if (name.empty()) {
     // Should report warning here
     // but false positive cannot be avoided
-    if (defName.empty()) {
+    if (def_name.empty()) {
       // const auto id = diags.getCustomDiagID(
       //     clang::DiagnosticsEngine::Warning,
       //     "anonymous enum without a typedef'd name is ignored.");
       // diags.Report(decl.getLocation(), id) << name;
       return std::nullopt;
     }
-    name = defName;
+    name = def_name;
   }
   auto type = match_type(decl, *decl.getIntegerType().getTypePtr());
   if (!type.has_value()) {
@@ -333,19 +333,19 @@ std::optional<ffi::tag_decl> ffi::ast_visitor::match_enum(
 }
 
 std::optional<ffi::tag_decl> ffi::ast_visitor::match_struct(
-    const clang::RecordDecl& decl, llvm::StringRef defName) const {
+    const clang::RecordDecl& decl, llvm::StringRef def_name) const {
   auto name = decl.getName();
   if (name.empty()) {
     // Should report warning here
     // but false positive cannot be avoided
-    if (defName.empty()) {
+    if (def_name.empty()) {
       // const auto id = diags.getCustomDiagID(
       //     clang::DiagnosticsEngine::Warning,
       //     "anonymous struct without a typedef'd name is ignored.");
       // diags.Report(decl.getLocation(), id) << name;
       return std::nullopt;
     }
-    name = defName;
+    name = def_name;
   }
 
   structure record;

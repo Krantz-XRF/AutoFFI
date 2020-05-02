@@ -103,8 +103,7 @@ std::optional<ffi::scalar_type> ffi::scalar_type::from_name(
 
   if (match.empty()) return std::nullopt;
 
-  ffi::scalar_type res{match[1].matched ? Unsigned : Signed, Special,
-                       WidthNone};
+  scalar_type res{match[1].matched ? Unsigned : Signed, Special, WidthNone};
   if (const auto c = *match[2].first; c == 'p')
     res.width = WidthPtr;
   else if (c == 'm')

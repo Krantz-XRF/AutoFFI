@@ -29,8 +29,7 @@
 namespace ffi {
 class ast_visitor {
  public:
-  ast_visitor(ffi::config& cfg, clang::ASTContext& context,
-              bool header_group)
+  ast_visitor(config& cfg, clang::ASTContext& context, bool header_group)
       : header_group{header_group}, cfg{cfg}, context{context} {}
 
   [[nodiscard]] bool check_decl(const clang::Decl* decl) const;
@@ -53,15 +52,15 @@ class ast_visitor {
   [[nodiscard]] std::optional<entity> match_function(
       const clang::FunctionDecl& decl) const;
   [[nodiscard]] std::optional<tag_decl> match_enum(
-      const clang::EnumDecl& decl, llvm::StringRef defName = {}) const;
+      const clang::EnumDecl& decl, llvm::StringRef def_name = {}) const;
   [[nodiscard]] std::optional<tag_decl> match_struct(
-      const clang::RecordDecl& decl, llvm::StringRef defName = {}) const;
+      const clang::RecordDecl& decl, llvm::StringRef def_name = {}) const;
   [[nodiscard]] std::optional<tag_decl> match_typedef(
       const clang::TypedefNameDecl& decl) const;
 
  private:
   bool header_group;
-  ffi::config& cfg;
+  config& cfg;
   clang::ASTContext& context;
 };
 }  // namespace ffi
