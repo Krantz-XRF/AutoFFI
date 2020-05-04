@@ -31,8 +31,12 @@ install:
   - git clone -b 6.2.0 --depth 1 git://github.com/fmtlib/fmt.git
   - cd fmt && mkdir build && cd build
   - cmake -DFMT_TEST=OFF -DFMT_DOC=OFF .. && sudo make install && cd ../..
+  # Install spdlog 1.5.0
+  - git clone -b v1.5.0 --depth 1 git://github.com/gabime/spdlog.git
+  - cd spdlog && mkdir build && cd build
+  - cmake -DSPDLOG_FMT_EXTERNAL=ON .. && sudo make install && cd ../..
 
 script:
   - mkdir build && cd build
   - /usr/bin/cmake -DCMAKE_PREFIX_PATH=/usr/lib/llvm-9 ..
-  - make
+  - cmake --build .

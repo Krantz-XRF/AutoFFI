@@ -11,6 +11,9 @@ message(STATUS "Using LLVMConfig.cmake in ${LLVM_DIR}")
 find_package(Clang REQUIRED)
 message(STATUS "Using ClangConfig.cmake in ${Clang_DIR}")
 
+# Use spdlog for logging information
+find_package(spdlog REQUIRED)
+
 # Use this fmt library in place of C++20 std::format
 find_package(fmt 6 REQUIRED)
 
@@ -26,4 +29,4 @@ target_include_directories(auto-ffi SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS})
 target_link_directories(auto-ffi PRIVATE ${LLVM_LIBRARY_DIRS})
 target_link_libraries(auto-ffi PRIVATE
   clangTooling clangBasic clangASTMatchers
-  fmt::fmt Microsoft.GSL::GSL)
+  fmt::fmt Microsoft.GSL::GSL spdlog::spdlog)
