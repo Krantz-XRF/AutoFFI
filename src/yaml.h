@@ -154,6 +154,19 @@ struct llvm::yaml::CustomMappingTraits<std::map<std::string, T>> {
   }
 };
 
+template <typename T>
+struct llvm::yaml::CustomMappingTraits<std::unordered_map<std::string, T>> {
+  static void inputOne(IO& io, StringRef key,
+                       std::unordered_map<std::string, T>& elem) {
+    auto kstr = key.str();
+    io.mapRequired(kstr.c_str(), elem[kstr]);
+  }
+
+  static void output(IO& io, std::unordered_map<std::string, T>& elem) {
+    for (auto& [k, v] : elem) io.mapRequired(k.c_str(), v);
+  }
+};
+
 template <>
 struct llvm::yaml::ScalarEnumerationTraits<ffi::name_case> {
   static void enumeration(IO& io, ffi::name_case& c) {
@@ -199,13 +212,13 @@ struct llvm::yaml::MappingTraits<ffi::name_converter_bundle> {
   }
 };
 
-template<>
-struct llvm::yaml::MappingTraits<ffi::name_resolver>{
+template <>
+struct llvm::yaml::MappingTraits<ffi::name_resolver> {
   static void mapping(IO& io, ffi::name_resolver& resolver) {
-    io.mapOptional("mapped_module_name",resolver.mapped_module_name);
-    io.mapOptional("data_ctors",resolver.data_ctors);
-    io.mapOptional("type_ctors",resolver.type_ctors);
-    io.mapOptional("variables",resolver.variables);
+    io.mapOptional("mapped_module_name", resolver.mapped_module_name);
+    io.mapOptional("data_ctors", resolver.data_ctors);
+    io.mapOptional("type_ctors", resolver.type_ctors);
+    io.mapOptional("variables", resolver.variables);
   }
 };
 
