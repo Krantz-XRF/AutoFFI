@@ -18,11 +18,13 @@
 #include <array>
 #include <iostream>
 
+#include <clang/Frontend/TextDiagnosticPrinter.h>
 #include <clang/Tooling/CompilationDatabase.h>
 #include <clang/Tooling/Tooling.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/InitLLVM.h>
+#include <llvm/Support/Process.h>
 
 #include <fmt/format.h>
 
@@ -99,6 +101,14 @@ int main(int argc, const char* argv[]) {
     llvm::yaml::Input input{contents.get()->getBuffer()};
     input >> driver.cfg;
     if (input.error()) continue;
+
+    // Diagnostics engine for configuration files
+    llvm::IntrusiveRefCntPtr ids = new clang::DiagnosticIDs;
+    llvm::IntrusiveRefCntPtr opts = new clang::DiagnosticOptions;
+    opts->ShowColors = llvm::sys::Process::StandardOutHasColors();
+    clang::TextDiagnosticPrinter printer{llvm::errs(), opts.get()};
+    clang::DiagnosticsEngine diags{ids, opts, &printer};
+    if (!validate_config(driver.cfg, diags)) continue;
 
     // Load CWD
     llvm::SmallString<128> current_path;

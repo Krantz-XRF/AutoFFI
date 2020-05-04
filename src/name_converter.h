@@ -43,10 +43,10 @@ struct name_converter {
   name_variant output_variant{name_variant::preserving};
   name_converter* forward_converter{nullptr};
   bool afterward{false};
-  std::string remove_prefix;
-  std::string remove_suffix;
-  std::string add_prefix;
-  std::string add_suffix;
+  std::string remove_prefix{};
+  std::string remove_suffix{};
+  std::string add_prefix{};
+  std::string add_suffix{};
 
   [[nodiscard]] std::string convert(std::string_view) const noexcept;
 };

@@ -17,6 +17,12 @@
 
 #pragma once
 
+#include <map>
+#include <unordered_map>
+#include <vector>
+
+#include <clang/Basic/Diagnostic.h>
+
 #include "name_converter.h"
 
 namespace ffi {
@@ -27,6 +33,24 @@ struct name_converter_bundle {
   cvt for_type{name_case::camel, name_variant::type_ctor, &for_all};
   cvt for_ctor{name_case::camel, name_variant::data_ctor, &for_all};
   cvt for_var{name_case::camel, name_variant::variable, &for_all};
+};
+
+// According to Haskell 2010 Report, there are six kinds of names in Haskell:
+// those for variables and constructors denote values; those for type
+// variables, type constructors, and type classes refer to entities related to
+// the type system; and module names refer to modules. There are two
+// constraints on naming:
+// - Names for variables and type variables are identifiers beginning with
+// lowercase letters or underscore; the other four kinds of names are
+// identifiers beginning with uppercase letters.
+// - An identifier must not be used as the name of a type constructor and a
+// class in the same scope.
+struct name_resolver {
+  using name_map = std::unordered_map<std::string, std::string>;
+  std::string mapped_module_name;
+  name_map type_ctors;
+  name_map variables;
+  name_map data_ctors;
 };
 
 struct config {
@@ -44,5 +68,8 @@ struct config {
   std::vector<std::string> file_names{};
   std::vector<std::string> is_header_group{};
   std::vector<std::string> compiler_options{};
+  std::map<std::string, name_resolver> explicit_name_mapping{};
 };
+
+bool validate_config(const config& cfg, clang::DiagnosticsEngine& diags);
 }  // namespace ffi

@@ -1,6 +1,6 @@
 target_sources(auto-ffi PRIVATE
   # Driver Program
-  "config.h" "main.cpp" "driver.h" "driver.cpp"
+  "config.h" "config.cpp" "main.cpp" "driver.h" "driver.cpp"
   # C Type Information
   "types.def" "types.h" "types.cpp"
   "function_type.h" "opaque_type.h" "pointer_type.h" "tag_type.h"

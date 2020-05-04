@@ -199,6 +199,16 @@ struct llvm::yaml::MappingTraits<ffi::name_converter_bundle> {
   }
 };
 
+template<>
+struct llvm::yaml::MappingTraits<ffi::name_resolver>{
+  static void mapping(IO& io, ffi::name_resolver& resolver) {
+    io.mapOptional("mapped_module_name",resolver.mapped_module_name);
+    io.mapOptional("data_ctors",resolver.data_ctors);
+    io.mapOptional("type_ctors",resolver.type_ctors);
+    io.mapOptional("variables",resolver.variables);
+  }
+};
+
 template <>
 struct llvm::yaml::MappingTraits<ffi::config> {
   static void mapping(IO& io, ffi::config& cfg) {
@@ -208,6 +218,8 @@ struct llvm::yaml::MappingTraits<ffi::config> {
     io.mapOptional("warn_no_c_linkage", cfg.warn_no_c_linkage);
     io.mapOptional("warn_no_external_formal_linkage",
                    cfg.warn_no_external_formal_linkage);
+    io.mapOptional("void_ptr_as_any_ptr", cfg.void_ptr_as_any_ptr);
+    io.mapOptional("allow_rank_n_types", cfg.allow_rank_n_types);
     io.mapOptional("name_converters", cfg.converters);
     io.mapOptional("file_name_converters", cfg.file_name_converters);
     io.mapOptional("library_name", cfg.library_name);
@@ -216,5 +228,6 @@ struct llvm::yaml::MappingTraits<ffi::config> {
     io.mapOptional("file_names", cfg.file_names);
     io.mapOptional("is_header_group", cfg.is_header_group);
     io.mapOptional("compiler_options", cfg.compiler_options);
+    io.mapOptional("explicit_name_mapping", cfg.explicit_name_mapping);
   }
 };
