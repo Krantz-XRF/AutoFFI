@@ -142,15 +142,15 @@ struct llvm::yaml::MappingTraits<ffi::module_contents> {
   }
 };
 
-template <typename T>
-struct llvm::yaml::CustomMappingTraits<std::map<std::string, T>> {
-  static void inputOne(IO& io, StringRef key, std::map<std::string, T>& elem) {
+template <typename T, typename C>
+struct llvm::yaml::CustomMappingTraits<std::map<std::string, T, C>> {
+  static void inputOne(IO& io, StringRef key, std::map<std::string, T, C>& m) {
     auto kstr = key.str();
-    io.mapRequired(kstr.c_str(), elem[kstr]);
+    io.mapRequired(kstr.c_str(), m[kstr]);
   }
 
-  static void output(IO& io, std::map<std::string, T>& elem) {
-    for (auto& [k, v] : elem) io.mapRequired(k.c_str(), v);
+  static void output(IO& io, std::map<std::string, T, C>& m) {
+    for (auto& [k, v] : m) io.mapRequired(k.c_str(), v);
   }
 };
 
@@ -215,9 +215,8 @@ struct llvm::yaml::MappingTraits<ffi::name_converter_bundle> {
 template <>
 struct llvm::yaml::MappingTraits<ffi::name_resolver> {
   static void mapping(IO& io, ffi::name_resolver& resolver) {
-    io.mapOptional("mapped_module_name", resolver.mapped_module_name);
-    io.mapOptional("data_ctors", resolver.data_ctors);
     io.mapOptional("type_ctors", resolver.type_ctors);
+    io.mapOptional("data_ctors", resolver.data_ctors);
     io.mapOptional("variables", resolver.variables);
   }
 };
@@ -241,6 +240,7 @@ struct llvm::yaml::MappingTraits<ffi::config> {
     io.mapOptional("file_names", cfg.file_names);
     io.mapOptional("is_header_group", cfg.is_header_group);
     io.mapOptional("compiler_options", cfg.compiler_options);
+    io.mapOptional("module_name_mapping", cfg.module_name_mapping);
     io.mapOptional("explicit_name_mapping", cfg.explicit_name_mapping);
   }
 };

@@ -26,7 +26,7 @@
 #include "module.h"
 
 namespace ffi {
-using module_list = std::map<std::string, ffi::module_contents>;
+using module_list = std::map<std::string, module_contents, std::less<>>;
 
 struct ffi_driver final : clang::tooling::FrontendActionFactory {
   clang::FrontendAction* create() override;

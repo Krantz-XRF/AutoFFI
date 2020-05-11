@@ -26,8 +26,8 @@
 
 namespace ffi {
 struct module_contents {
-  std::map<std::string, ctype> entities{};
-  std::map<std::string, tag_type> tags{};
+  std::map<std::string, ctype, std::less<>> entities{};
+  std::map<std::string, tag_type, std::less<>> tags{};
   std::vector<std::string> imports{};
 };
 

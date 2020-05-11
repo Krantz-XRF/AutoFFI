@@ -24,9 +24,10 @@
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/InitLLVM.h>
-#include <llvm/Support/Process.h>
 
 #include <fmt/format.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/spdlog.h>
 
 #include "config.h"
 #include "driver.h"
@@ -74,6 +75,10 @@ int main(int argc, const char* argv[]) {
     return 0;
   }
 
+  set_default_logger(spdlog::stderr_color_st("auto-ffi"));
+  spdlog::set_pattern("%n: %^%l:%$ %v");
+  if (verbose) spdlog::set_level(spdlog::level::debug);
+
   ffi::ffi_driver driver;
 
   // Configurations
@@ -89,6 +94,9 @@ int main(int argc, const char* argv[]) {
     return 0;
   }
 
+  // error counter
+  int total_errors{0};
+
   // Run on config files
   for (const auto& cfg_file : config_files) {
     auto contents = llvm::MemoryBuffer::getFile(cfg_file);
@@ -102,13 +110,13 @@ int main(int argc, const char* argv[]) {
     input >> driver.cfg;
     if (input.error()) continue;
 
+    auto logger = spdlog::stderr_color_st(cfg_file);
+
     // Diagnostics engine for configuration files
-    llvm::IntrusiveRefCntPtr ids = new clang::DiagnosticIDs;
-    llvm::IntrusiveRefCntPtr opts = new clang::DiagnosticOptions;
-    opts->ShowColors = llvm::sys::Process::StandardOutHasColors();
-    clang::TextDiagnosticPrinter printer{llvm::errs(), opts.get()};
-    clang::DiagnosticsEngine diags{ids, opts, &printer};
-    if (!validate_config(driver.cfg, diags)) continue;
+    if (!validate_config(driver.cfg, *logger)) {
+      ++total_errors;
+      continue;
+    }
 
     // Load CWD
     llvm::SmallString<128> current_path;
@@ -123,7 +131,11 @@ int main(int argc, const char* argv[]) {
 
     clang::tooling::ClangTool tool{compilations, driver.cfg.file_names};
 
-    if (const auto status = tool.run(&driver)) return status;
+    if (const auto status = tool.run(&driver)) {
+      logger->debug("Clang front-end fails with status {}.", status);
+      ++total_errors;
+      continue;
+    }
 
     if (yaml) {
       llvm::yaml::Output output{llvm::outs()};
@@ -133,9 +145,21 @@ int main(int argc, const char* argv[]) {
     ffi::haskell_code_gen code_gen{driver.cfg};
     for (auto& [name, mod] : driver.modules) code_gen.gen_module(name, mod);
 
+    int nc{0};
+    nc += ffi::name_clashes(driver.cfg.rev_modules, *logger, "module",
+                            "(global)");
+    for (auto [mod, m] : driver.cfg.explicit_name_mapping) {
+      nc += ffi::name_clashes(m.rev_variables, *logger, "variable", mod);
+      nc += ffi::name_clashes(m.rev_data_ctors, *logger, "data ctor", mod);
+      nc += ffi::name_clashes(m.rev_type_ctors, *logger, "type ctor", mod);
+    }
+    logger->debug("Total name clash: {}.", nc);
+    if (nc) ++total_errors;
+
     // Recover CWD
     llvm::sys::fs::set_current_path(current_path);
   }
 
-  return 0;
+  spdlog::debug("Total errors: {}\n", total_errors);
+  return total_errors;
 }

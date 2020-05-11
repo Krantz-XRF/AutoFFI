@@ -21,7 +21,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <clang/Basic/Diagnostic.h>
+#include <spdlog/spdlog.h>
 
 #include "name_converter.h"
 
@@ -46,11 +46,16 @@ struct name_converter_bundle {
 // - An identifier must not be used as the name of a type constructor and a
 // class in the same scope.
 struct name_resolver {
-  using name_map = std::unordered_map<std::string, std::string>;
-  std::string mapped_module_name;
+  using name_map = std::map<std::string, std::string, std::less<>>;
   name_map type_ctors;
-  name_map variables;
   name_map data_ctors;
+  name_map variables;
+  // internal, should not be exported to config files
+  using rev_name_map =
+      std::unordered_multimap<std::string_view, std::string_view>;
+  rev_name_map rev_type_ctors;
+  rev_name_map rev_data_ctors;
+  rev_name_map rev_variables;
 };
 
 struct config {
@@ -68,8 +73,14 @@ struct config {
   std::vector<std::string> file_names{};
   std::vector<std::string> is_header_group{};
   std::vector<std::string> compiler_options{};
-  std::map<std::string, name_resolver> explicit_name_mapping{};
+  name_resolver::name_map module_name_mapping{};
+  std::map<std::string, name_resolver, std::less<>> explicit_name_mapping{};
+  // internal, should not be exported to config files
+  name_resolver::rev_name_map rev_modules;
 };
 
-bool validate_config(const config& cfg, clang::DiagnosticsEngine& diags);
+bool validate_config(const config& cfg, spdlog::logger& logger);
+
+int name_clashes(const name_resolver::rev_name_map& m, spdlog::logger& logger,
+                 std::string_view kind, std::string_view scope);
 }  // namespace ffi

@@ -29,15 +29,14 @@ class haskell_code_gen {
 
   void gen_module(const std::string& name, const module_contents& mod) noexcept;
   void gen_module_prefix() noexcept;
-  void gen_module_name(const std::string& name) noexcept;
 
-  void gen_func_name(const std::string& name) noexcept;
-  void gen_type_name(const std::string& name) noexcept;
-  void gen_const_name(const std::string& name) noexcept;
+  void gen_name(name_variant v, const std::string& name,
+                std::string_view scope = {}) noexcept;
 
   void gen_entity_raw(const std::string& name, const ctype& type,
-                      bool use_forall = false) noexcept;
-  void gen_entity(const_entity& entity) noexcept;
+                      bool use_forall = false,
+                      std::string_view scope = {}) noexcept;
+  void gen_entity(const_entity& entity, std::string_view scope = {}) noexcept;
   void gen_type(const ctype& type, bool paren = false) noexcept;
   void gen_function_type(const function_type& func) noexcept;
   void gen_scalar_type(const scalar_type& scalar) noexcept;
@@ -60,6 +59,9 @@ class haskell_code_gen {
   static bool is_void(const ctype& type) noexcept;
   static bool is_function(const ctype& type) noexcept;
 
+  std::string_view name_resolve(name_variant v, std::string_view s,
+                                std::string_view scope = {}) const noexcept;
+
  protected:
   class explicit_for_all_handler {
    public:
@@ -80,6 +82,7 @@ class haskell_code_gen {
 
  private:
   config& cfg;
+  name_resolver* resolver{nullptr};
   llvm::raw_ostream* os{nullptr};
   std::string fresh_variable;
 };

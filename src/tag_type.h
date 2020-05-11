@@ -30,7 +30,7 @@ struct structure {
 
 struct enumeration {
   ctype underlying_type{};
-  std::map<std::string, intmax_t> values{};
+  std::map<std::string, intmax_t, std::less<>> values{};
 };
 
 struct tag_type {

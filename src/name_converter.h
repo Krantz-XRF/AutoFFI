@@ -51,5 +51,5 @@ struct name_converter {
   [[nodiscard]] std::string convert(std::string_view) const noexcept;
 };
 
-using name_converter_map = std::map<std::string, name_converter>;
+using name_converter_map = std::map<std::string, name_converter, std::less<>>;
 }  // namespace ffi

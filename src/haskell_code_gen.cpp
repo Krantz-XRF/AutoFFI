@@ -19,6 +19,8 @@
 
 #include <fmt/format.h>
 
+#include "gsl/gsl_assert"
+
 void ffi::haskell_code_gen::gen_module(const std::string& name,
                                        const module_contents& mod) noexcept {
   if (auto p = cfg.file_name_converters.find(name);
@@ -26,6 +28,7 @@ void ffi::haskell_code_gen::gen_module(const std::string& name,
     cfg.converters.for_all.forward_converter = &p->second;
   else
     cfg.converters.for_all.forward_converter = nullptr;
+  resolver = &cfg.explicit_name_mapping[name];
 
   auto mname = cfg.converters.for_module.convert(name);
   auto parent_dir = format(FMT_STRING("{}/{}/LowLevel"), cfg.output_directory,
@@ -48,7 +51,7 @@ void ffi::haskell_code_gen::gen_module(const std::string& name,
          "{-# OPTIONS_GHC -Wno-unused-imports #-}\n";
   *os << "module ";
   gen_module_prefix();
-  gen_module_name(name);
+  gen_name(name_variant::module_name, name);
   *os << " where\n\n";
 
   *os << "import Foreign.C.Types\n"
@@ -67,14 +70,17 @@ void ffi::haskell_code_gen::gen_module_prefix() noexcept {
   *os << cfg.library_name << ".LowLevel.";
 }
 
-void ffi::haskell_code_gen::gen_module_name(const std::string& name) noexcept {
-  *os << cfg.converters.for_module.convert(name);
+void ffi::haskell_code_gen::gen_name(name_variant v, const std::string& name,
+                                     std::string_view scope) noexcept {
+  const auto nm = name_resolve(v, name, scope);
+  spdlog::debug("name '{}::{}' get converted to '{}'.\n", scope, name, nm);
+  *os << llvm::StringRef{nm.data(), nm.size()};
 }
 
 void ffi::haskell_code_gen::gen_entity_raw(const std::string& name,
-                                           const ctype& type,
-                                           bool use_forall) noexcept {
-  gen_func_name(name);
+                                           const ctype& type, bool use_forall,
+                                           std::string_view scope) noexcept {
+  gen_name(name_variant::variable, name, scope);
   *os << " :: ";
   clear_fresh_variable();
   if (use_forall)
@@ -84,21 +90,10 @@ void ffi::haskell_code_gen::gen_entity_raw(const std::string& name,
   *os << '\n';
 }
 
-void ffi::haskell_code_gen::gen_entity(const_entity& entity) noexcept {
+void ffi::haskell_code_gen::gen_entity(const_entity& entity,
+                                       std::string_view scope) noexcept {
   *os << "foreign import ccall \"" << entity.first << "\" ";
-  gen_entity_raw(entity.first, entity.second);
-}
-
-void ffi::haskell_code_gen::gen_func_name(const std::string& name) noexcept {
-  *os << cfg.converters.for_var.convert(name);
-}
-
-void ffi::haskell_code_gen::gen_type_name(const std::string& name) noexcept {
-  *os << cfg.converters.for_type.convert(name);
-}
-
-void ffi::haskell_code_gen::gen_const_name(const std::string& name) noexcept {
-  *os << cfg.converters.for_ctor.convert(name);
+  gen_entity_raw(entity.first, entity.second, false, scope);
 }
 
 void ffi::haskell_code_gen::gen_type(const ctype& type, bool paren) noexcept {
@@ -132,7 +127,7 @@ void ffi::haskell_code_gen::gen_scalar_type(
 
 void ffi::haskell_code_gen::gen_opaque_type(
     const opaque_type& opaque) noexcept {
-  gen_type_name(opaque.name);
+  gen_name(name_variant::type_ctor, opaque.name);
 }
 
 void ffi::haskell_code_gen::gen_pointer_type(
@@ -164,11 +159,11 @@ void ffi::haskell_code_gen::gen_tag(const std::string& name,
 void ffi::haskell_code_gen::gen_enum(const std::string& name,
                                      const enumeration& enm) noexcept {
   *os << "newtype ";
-  gen_type_name(name);
+  gen_name(name_variant::type_ctor, name);
   *os << " = ";
-  gen_const_name(name);
+  gen_name(name_variant::data_ctor, name);
   *os << "{ unwrap";
-  gen_type_name(name);
+  gen_name(name_variant::type_ctor, name);
   *os << " :: ";
   gen_type(enm.underlying_type);
   *os << " }";
@@ -181,23 +176,23 @@ void ffi::haskell_code_gen::gen_enum_item(const std::string& name,
                                           const std::string& item,
                                           intmax_t val) noexcept {
   *os << "pattern ";
-  gen_const_name(item);
+  gen_name(name_variant::data_ctor, item);
   *os << " = ";
-  gen_const_name(name);
+  gen_name(name_variant::data_ctor, name);
   *os << ' ' << val << '\n';
 }
 
 void ffi::haskell_code_gen::gen_struct(const std::string& name,
                                        const structure& str) noexcept {
   *os << "data ";
-  gen_type_name(name);
+  gen_name(name_variant::type_ctor, name);
   *os << " = ";
-  gen_const_name(name);
+  gen_name(name_variant::data_ctor, name);
   if (!str.fields.empty()) {
     *os << "\n  { ";
     auto f = begin(str.fields);
     while (true) {
-      gen_entity_raw(f->first, f->second, true);
+      gen_entity_raw(f->first, f->second, true, name);
       if (++f == end(str.fields)) break;
       *os << "  , ";
     }
@@ -251,6 +246,36 @@ bool ffi::haskell_code_gen::is_void(const ctype& type) noexcept {
 
 bool ffi::haskell_code_gen::is_function(const ctype& type) noexcept {
   return std::holds_alternative<function_type>(type.value);
+}
+
+std::string_view ffi::haskell_code_gen::name_resolve(
+    name_variant v, std::string_view s, std::string_view scope) const noexcept {
+  Expects(v != name_variant::preserving);
+  const auto nv = static_cast<size_t>(v) - 1;
+  Expects(0 <= nv && nv < 4);
+  auto& conv = *std::array{
+      &cfg.converters.for_var,
+      &cfg.converters.for_module,
+      &cfg.converters.for_type,
+      &cfg.converters.for_ctor,
+  }[nv];
+  auto& fwd = *std::array{
+      &resolver->variables,
+      &cfg.module_name_mapping,
+      &resolver->type_ctors,
+      &resolver->data_ctors,
+  }[nv];
+  auto& rev = *std::array{
+      &resolver->rev_variables,
+      &cfg.rev_modules,
+      &resolver->rev_type_ctors,
+      &resolver->rev_data_ctors,
+  }[nv];
+  auto src_name = fmt::format("{}::{}", scope, s);
+  if (const auto p = fwd.find(src_name); p != fwd.cend()) return p->second;
+  auto [p, _] = fwd.emplace(std::move(src_name), conv.convert(s));
+  rev.emplace(p->second, p->first);
+  return p->second;
 }
 
 auto ffi::haskell_code_gen::explicit_for_all() -> explicit_for_all_handler {
