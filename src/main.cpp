@@ -40,14 +40,23 @@ namespace {
 cl::OptionCategory category{"auto-FFI Options"};
 cl::opt<bool> help{"h", cl::desc{"Alias for -help"}, cl::Hidden};
 cl::opt<bool> dump_config{
-    "dump-config", cl::desc{"Dump configuration options to stdout and exit."},
-    cl::cat{category}};
-cl::opt<bool> yaml{"yaml", cl::desc{"Dump YAML for entities."},
-                   cl::cat{category}};
-cl::opt<bool> verbose{"verbose", cl::desc{"Print verbose output message."},
-                      cl::cat{category}};
-cl::list<std::string> config_files{cl::Positional, cl::desc{"[<file> ...]"},
-                                   cl::cat{category}};
+    "dump-config", cl::cat{category},
+    cl::desc{"Dump configuration options to stdout and exit."}};
+cl::opt<bool> yaml{"yaml", cl::cat{category},
+                   cl::desc{"Dump YAML for generated modules."}};
+cl::opt<std::string> verbose{
+    "verbose", cl::cat{category}, cl::init("info"), cl::value_desc{"level"},
+    cl::desc{"Verbosity: [trace, debug, info, warning, error, critical, off]"}};
+cl::list<std::string> config_files{cl::Positional, cl::cat{category},
+                                   cl::desc{"[<file> ...]"}};
+
+std::optional<spdlog::level::level_enum> parse_verbosity(std::string_view s) {
+  static constexpr std::array levels = SPDLOG_LEVEL_NAMES;
+  const auto p = std::find(begin(levels), end(levels), s);
+  if (p == end(levels)) return std::nullopt;
+  return static_cast<spdlog::level::level_enum>(p - begin(levels));
+}
+
 const char version[]{
     "auto-FFI 2020\n"
     "Copyright (C) 2020 Xie Ruifeng.\n"
@@ -77,7 +86,7 @@ int main(int argc, const char* argv[]) {
 
   set_default_logger(spdlog::stderr_color_st("auto-ffi"));
   spdlog::set_pattern("%n: %^%l:%$ %v");
-  if (verbose) spdlog::set_level(spdlog::level::debug);
+  if (const auto v = parse_verbosity(verbose)) spdlog::set_level(*v);
 
   ffi::ffi_driver driver;
 

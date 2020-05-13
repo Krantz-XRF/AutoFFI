@@ -26,9 +26,10 @@ int ffi::name_clashes(const name_resolver::rev_name_map& m,
         ++it;
       else {
         fmt::memory_buffer buf;
-        format_to(buf, "The following {} names in {} all converts to {}:\n",
-                  kind, scope, it->first);
-        for (; it->first == cur; ++it) format_to(buf, "- {}\n", it->second);
+        format_to(buf,
+                  "the following {} names in '{}' all converts to '{}':", kind,
+                  scope, it->first);
+        for (; it->first == cur; ++it) format_to(buf, "\n- {}", it->second);
         logger.error(to_string(buf));
         ++conflict;
       }

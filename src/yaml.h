@@ -154,16 +154,25 @@ struct llvm::yaml::CustomMappingTraits<std::map<std::string, T, C>> {
   }
 };
 
-template <typename T>
-struct llvm::yaml::CustomMappingTraits<std::unordered_map<std::string, T>> {
+template <typename T, typename C>
+struct llvm::yaml::CustomMappingTraits<std::map<ffi::scoped_name, T, C>> {
   static void inputOne(IO& io, StringRef key,
-                       std::unordered_map<std::string, T>& elem) {
-    auto kstr = key.str();
-    io.mapRequired(kstr.c_str(), elem[kstr]);
+                       std::map<ffi::scoped_name, T, C>& m) {
+    const auto p = key.find('.');
+    if (p == StringRef::npos) {
+      // no scope provided
+      ffi::scoped_name nm{{}, key.str()};
+      io.mapRequired(nm.name.c_str(), m[nm]);
+    } else if (key.size() <= p + 1 || key.find('.', p + 1) != StringRef::npos) {
+      io.setError(fmt::format("invalid scoped name '{}'", key.str()));
+    } else {
+      ffi::scoped_name nm{key.substr(0, p).str(), key.substr(p + 1).str()};
+      io.mapRequired(key.str().c_str(), m[nm]);
+    }
   }
 
-  static void output(IO& io, std::unordered_map<std::string, T>& elem) {
-    for (auto& [k, v] : elem) io.mapRequired(k.c_str(), v);
+  static void output(IO& io, std::map<ffi::scoped_name, T, C>& m) {
+    for (auto& [k, v] : m) io.mapRequired(fmt::to_string(k).c_str(), v);
   }
 };
 

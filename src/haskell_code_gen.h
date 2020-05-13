@@ -59,8 +59,8 @@ class haskell_code_gen {
   static bool is_void(const ctype& type) noexcept;
   static bool is_function(const ctype& type) noexcept;
 
-  std::string_view name_resolve(name_variant v, std::string_view s,
-                                std::string_view scope = {}) const noexcept;
+  std::string_view name_resolve(name_variant v,
+                                scoped_name_view n) const noexcept;
 
  protected:
   class explicit_for_all_handler {

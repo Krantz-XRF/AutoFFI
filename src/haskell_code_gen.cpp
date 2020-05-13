@@ -72,8 +72,8 @@ void ffi::haskell_code_gen::gen_module_prefix() noexcept {
 
 void ffi::haskell_code_gen::gen_name(name_variant v, const std::string& name,
                                      std::string_view scope) noexcept {
-  const auto nm = name_resolve(v, name, scope);
-  spdlog::debug("name '{}::{}' get converted to '{}'.\n", scope, name, nm);
+  scoped_name_view sname{scope, name};
+  const auto nm = name_resolve(v, sname);
   *os << llvm::StringRef{nm.data(), nm.size()};
 }
 
@@ -249,7 +249,7 @@ bool ffi::haskell_code_gen::is_function(const ctype& type) noexcept {
 }
 
 std::string_view ffi::haskell_code_gen::name_resolve(
-    name_variant v, std::string_view s, std::string_view scope) const noexcept {
+    name_variant v, scoped_name_view n) const noexcept {
   Expects(v != name_variant::preserving);
   const auto nv = static_cast<size_t>(v) - 1;
   Expects(0 <= nv && nv < 4);
@@ -271,10 +271,10 @@ std::string_view ffi::haskell_code_gen::name_resolve(
       &resolver->rev_type_ctors,
       &resolver->rev_data_ctors,
   }[nv];
-  auto src_name = fmt::format("{}::{}", scope, s);
-  if (const auto p = fwd.find(src_name); p != fwd.cend()) return p->second;
-  auto [p, _] = fwd.emplace(std::move(src_name), conv.convert(s));
+  if (const auto p = fwd.find(n); p != fwd.cend()) return p->second;
+  auto [p, _] = fwd.emplace(n.materialize(), conv.convert(n.name));
   rev.emplace(p->second, p->first);
+  spdlog::trace("name '{}' get converted to '{}'.", n, p->second);
   return p->second;
 }
 

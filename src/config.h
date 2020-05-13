@@ -21,6 +21,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include <fmt/format.h>
 #include <spdlog/spdlog.h>
 
 #include "name_converter.h"
@@ -35,6 +36,30 @@ struct name_converter_bundle {
   cvt for_var{name_case::camel, name_variant::variable, &for_all};
 };
 
+struct scoped_name;
+
+struct scoped_name_view {
+  std::string_view scope{};
+  std::string_view name{};
+
+  scoped_name materialize() const;
+};
+
+struct scoped_name {
+  std::string scope{};
+  std::string name{};
+
+  operator scoped_name_view() const { return {scope, name}; }
+};
+
+inline scoped_name scoped_name_view::materialize() const {
+  return {std::string{scope}, std::string{name}};
+}
+
+inline bool operator<(scoped_name_view n1, scoped_name_view n2) {
+  return n1.scope < n2.scope || (n1.scope == n2.scope && n1.name < n2.name);
+}
+
 // According to Haskell 2010 Report, there are six kinds of names in Haskell:
 // those for variables and constructors denote values; those for type
 // variables, type constructors, and type classes refer to entities related to
@@ -46,13 +71,13 @@ struct name_converter_bundle {
 // - An identifier must not be used as the name of a type constructor and a
 // class in the same scope.
 struct name_resolver {
-  using name_map = std::map<std::string, std::string, std::less<>>;
+  using name_map = std::map<scoped_name, std::string, std::less<>>;
   name_map type_ctors;
   name_map data_ctors;
   name_map variables;
   // internal, should not be exported to config files
   using rev_name_map =
-      std::unordered_multimap<std::string_view, std::string_view>;
+      std::unordered_multimap<std::string_view, scoped_name_view>;
   rev_name_map rev_type_ctors;
   rev_name_map rev_data_ctors;
   rev_name_map rev_variables;
@@ -84,3 +109,16 @@ bool validate_config(const config& cfg, spdlog::logger& logger);
 int name_clashes(const name_resolver::rev_name_map& m, spdlog::logger& logger,
                  std::string_view kind, std::string_view scope);
 }  // namespace ffi
+
+template <>
+struct fmt::formatter<ffi::scoped_name_view> : formatter<std::string_view> {
+  template <typename FormatContext>
+  auto format(ffi::scoped_name_view nm, FormatContext& context) {
+    return formatter<std::string_view>::format(
+        nm.scope.empty() ? nm.name : fmt::format("{}.{}", nm.scope, nm.name),
+        context);
+  }
+};
+
+template <>
+struct fmt::formatter<ffi::scoped_name> : formatter<ffi::scoped_name_view> {};
