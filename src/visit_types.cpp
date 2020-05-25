@@ -194,7 +194,7 @@ std::optional<ffi::ctype> ffi::ast_visitor::match_type(
   if (auto tagType = type.getAs<clang::TagType>()) {
     auto tagDecl = tagType->getDecl();
     auto tagName = tagDecl->getName();
-    return ctype{opaque_type{tagName}};
+    return ctype{opaque_type{tagName, llvm::isa<clang::EnumType>(tagType)}};
   }
   if (auto funcType = type.getAs<clang::FunctionProtoType>()) {
     if (funcType->getCallConv() != clang::CC_C) {
@@ -251,7 +251,8 @@ std::optional<ffi::entity> ffi::ast_visitor::match_var_raw(
     const auto id = diags.getCustomDiagID(
         clang::DiagnosticsEngine::Warning,
         "declaration is ignored, because its type is not marshallable "
-        "(marshallable types: integers, floating points, and pointers).");
+        "(marshallable types: integers, floating points, pointers, and newtype "
+        "wrappers for marshallable types).");
     diags.Report(decl.getLocation(), id);
     return std::nullopt;
   }

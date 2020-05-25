@@ -19,5 +19,7 @@
 
 bool ffi::is_marshallable(const ctype& type) noexcept {
   return std::holds_alternative<scalar_type>(type.value) ||
-         std::holds_alternative<pointer_type>(type.value);
+         std::holds_alternative<pointer_type>(type.value) ||
+         (std::holds_alternative<opaque_type>(type.value) &&
+          std::get<opaque_type>(type.value).marshallable);
 }

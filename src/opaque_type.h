@@ -22,5 +22,6 @@
 namespace ffi {
 struct opaque_type {
   std::string name;
+  bool marshallable{false};
 };
 }  // namespace ffi

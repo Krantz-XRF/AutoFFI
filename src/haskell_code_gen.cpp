@@ -45,7 +45,9 @@ void ffi::haskell_code_gen::gen_module(const std::string& name,
 
   *os << "{-# LANGUAGE EmptyDataDecls #-}\n"
          "{-# LANGUAGE ForeignFunctionInterface #-}\n"
-         "{-# LANGUAGE PatternSynonyms #-}\n";
+         "{-# LANGUAGE PatternSynonyms #-}\n"
+         "{-# LANGUAGE GeneralizedNewtypeDeriving #-}\n"
+         "{-# LANGUAGE DerivingStrategies #-}\n";
   if (cfg.allow_rank_n_types) *os << "{-# LANGUAGE RankNTypes #-}\n";
   *os << "{-# OPTIONS_GHC -Wno-missing-pattern-synonym-signatures #-}\n"
          "{-# OPTIONS_GHC -Wno-unused-imports #-}\n";
@@ -60,9 +62,9 @@ void ffi::haskell_code_gen::gen_module(const std::string& name,
          "import Foreign.Ptr\n"
          "import Foreign.Marshal.Alloc\n";
   *os << '\n';
-  for (auto& imp : mod.imports) *os << "import " << imp << '\n';
+  for (const auto& imp : mod.imports) *os << "import " << imp << '\n';
   if (!mod.imports.empty()) *os << '\n';
-  for (auto& [name, tag] : mod.tags) gen_tag(name, tag);
+  for (const auto& [name, tag] : mod.tags) gen_tag(name, tag);
   for (const auto& entity : mod.entities) gen_entity(entity);
 }
 
@@ -166,9 +168,9 @@ void ffi::haskell_code_gen::gen_enum(const std::string& name,
   gen_name(name_variant::type_ctor, name);
   *os << " :: ";
   gen_type(enm.underlying_type);
-  *os << " }";
-  *os << '\n';
-  for (auto& [item, val] : enm.values) gen_enum_item(name, item, val);
+  *os << " }\n";
+  *os << "  deriving newtype (Storable)\n";
+  for (const auto& [item, val] : enm.values) gen_enum_item(name, item, val);
   *os << '\n';
 }
 
@@ -220,7 +222,7 @@ bool ffi::haskell_code_gen::requires_paren(int tid) noexcept {
 
 bool ffi::haskell_code_gen::is_cchar(const ctype& type) noexcept {
   if (std::holds_alternative<scalar_type>(type.value)) {
-    auto& scalar = std::get<scalar_type>(type.value);
+    const auto& scalar = std::get<scalar_type>(type.value);
     return scalar.sign == scalar_type::Unspecified &&
            scalar.qualifier == scalar_type::Char &&
            scalar.width == scalar_type::WidthNone;
@@ -230,7 +232,7 @@ bool ffi::haskell_code_gen::is_cchar(const ctype& type) noexcept {
 
 bool ffi::haskell_code_gen::is_cstring(const ctype& type) noexcept {
   if (std::holds_alternative<pointer_type>(type.value)) {
-    auto& pointer = std::get<pointer_type>(type.value);
+    const auto& pointer = std::get<pointer_type>(type.value);
     return is_cchar(*pointer.pointee);
   }
   return false;
@@ -238,7 +240,7 @@ bool ffi::haskell_code_gen::is_cstring(const ctype& type) noexcept {
 
 bool ffi::haskell_code_gen::is_void(const ctype& type) noexcept {
   if (std::holds_alternative<scalar_type>(type.value)) {
-    auto& scalar = std::get<scalar_type>(type.value);
+    const auto& scalar = std::get<scalar_type>(type.value);
     return scalar.qualifier == scalar_type::Void;
   }
   return false;
@@ -248,8 +250,8 @@ bool ffi::haskell_code_gen::is_function(const ctype& type) noexcept {
   return std::holds_alternative<function_type>(type.value);
 }
 
-std::string_view ffi::haskell_code_gen::name_resolve(
-    name_variant v, scoped_name_view n) const noexcept {
+std::string_view ffi::haskell_code_gen::name_resolve(name_variant v,
+                                                     scoped_name_view n) const {
   Expects(v != name_variant::preserving);
   const auto nv = static_cast<size_t>(v) - 1;
   Expects(0 <= nv && nv < 4);

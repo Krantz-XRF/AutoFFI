@@ -53,6 +53,7 @@ template <>
 struct llvm::yaml::MappingTraits<ffi::opaque_type> {
   static void mapping(IO& io, ffi::opaque_type& type) {
     io.mapRequired("alias", type.name);
+    io.mapRequired("marshallable", type.marshallable);
   }
 };
 
