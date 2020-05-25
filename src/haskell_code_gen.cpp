@@ -22,7 +22,7 @@
 #include "gsl/gsl_assert"
 
 void ffi::haskell_code_gen::gen_module(const std::string& name,
-                                       const module_contents& mod) noexcept {
+                                       const module_contents& mod) {
   if (auto p = cfg.file_name_converters.find(name);
       p != cfg.file_name_converters.cend())
     cfg.converters.for_all.forward_converter = &p->second;
@@ -68,12 +68,12 @@ void ffi::haskell_code_gen::gen_module(const std::string& name,
   for (const auto& entity : mod.entities) gen_entity(entity);
 }
 
-void ffi::haskell_code_gen::gen_module_prefix() noexcept {
+void ffi::haskell_code_gen::gen_module_prefix() {
   *os << cfg.library_name << ".LowLevel.";
 }
 
 void ffi::haskell_code_gen::gen_name(name_variant v, const std::string& name,
-                                     std::string_view scope) noexcept {
+                                     std::string_view scope) {
   scoped_name_view sname{scope, name};
   const auto nm = name_resolve(v, sname);
   *os << llvm::StringRef{nm.data(), nm.size()};
@@ -81,7 +81,7 @@ void ffi::haskell_code_gen::gen_name(name_variant v, const std::string& name,
 
 void ffi::haskell_code_gen::gen_entity_raw(const std::string& name,
                                            const ctype& type, bool use_forall,
-                                           std::string_view scope) noexcept {
+                                           std::string_view scope) {
   gen_name(name_variant::variable, name, scope);
   *os << " :: ";
   clear_fresh_variable();
@@ -93,12 +93,12 @@ void ffi::haskell_code_gen::gen_entity_raw(const std::string& name,
 }
 
 void ffi::haskell_code_gen::gen_entity(const_entity& entity,
-                                       std::string_view scope) noexcept {
+                                       std::string_view scope) {
   *os << "foreign import ccall \"" << entity.first << "\" ";
   gen_entity_raw(entity.first, entity.second, false, scope);
 }
 
-void ffi::haskell_code_gen::gen_type(const ctype& type, bool paren) noexcept {
+void ffi::haskell_code_gen::gen_type(const ctype& type, bool paren) {
   const auto idx = type.value.index();
   paren = paren && requires_paren(idx) && !is_cstring(type);
   if (paren) *os << "(";
@@ -112,8 +112,7 @@ void ffi::haskell_code_gen::gen_type(const ctype& type, bool paren) noexcept {
   if (paren) *os << ")";
 }
 
-void ffi::haskell_code_gen::gen_function_type(
-    const function_type& func) noexcept {
+void ffi::haskell_code_gen::gen_function_type(const function_type& func) {
   for (const auto& tp : func.params) {
     gen_type(tp.second);
     *os << " -> ";
@@ -122,18 +121,15 @@ void ffi::haskell_code_gen::gen_function_type(
   gen_type(*func.return_type, true);
 }
 
-void ffi::haskell_code_gen::gen_scalar_type(
-    const scalar_type& scalar) noexcept {
+void ffi::haskell_code_gen::gen_scalar_type(const scalar_type& scalar) {
   *os << scalar.as_haskell();
 }
 
-void ffi::haskell_code_gen::gen_opaque_type(
-    const opaque_type& opaque) noexcept {
+void ffi::haskell_code_gen::gen_opaque_type(const opaque_type& opaque) {
   gen_name(name_variant::type_ctor, opaque.name);
 }
 
-void ffi::haskell_code_gen::gen_pointer_type(
-    const pointer_type& pointer) noexcept {
+void ffi::haskell_code_gen::gen_pointer_type(const pointer_type& pointer) {
   auto& pointee = *pointer.pointee;
   if (is_cchar(pointee)) {
     *os << "CString";
@@ -151,7 +147,7 @@ void ffi::haskell_code_gen::gen_pointer_type(
 }
 
 void ffi::haskell_code_gen::gen_tag(const std::string& name,
-                                    const tag_type& tag) noexcept {
+                                    const tag_type& tag) {
   if (std::holds_alternative<enumeration>(tag.payload))
     gen_enum(name, std::get<enumeration>(tag.payload));
   else if (std::holds_alternative<structure>(tag.payload))
@@ -159,7 +155,7 @@ void ffi::haskell_code_gen::gen_tag(const std::string& name,
 }
 
 void ffi::haskell_code_gen::gen_enum(const std::string& name,
-                                     const enumeration& enm) noexcept {
+                                     const enumeration& enm) {
   *os << "newtype ";
   gen_name(name_variant::type_ctor, name);
   *os << " = ";
@@ -176,7 +172,7 @@ void ffi::haskell_code_gen::gen_enum(const std::string& name,
 
 void ffi::haskell_code_gen::gen_enum_item(const std::string& name,
                                           const std::string& item,
-                                          intmax_t val) noexcept {
+                                          intmax_t val) {
   *os << "pattern ";
   gen_name(name_variant::data_ctor, item);
   *os << " = ";
@@ -185,7 +181,7 @@ void ffi::haskell_code_gen::gen_enum_item(const std::string& name,
 }
 
 void ffi::haskell_code_gen::gen_struct(const std::string& name,
-                                       const structure& str) noexcept {
+                                       const structure& str) {
   *os << "data ";
   gen_name(name_variant::type_ctor, name);
   *os << " = ";
@@ -203,11 +199,9 @@ void ffi::haskell_code_gen::gen_struct(const std::string& name,
   *os << "\n\n";
 }
 
-void ffi::haskell_code_gen::clear_fresh_variable() noexcept {
-  fresh_variable.clear();
-}
+void ffi::haskell_code_gen::clear_fresh_variable() { fresh_variable.clear(); }
 
-std::string ffi::haskell_code_gen::next_fresh_variable() noexcept {
+std::string ffi::haskell_code_gen::next_fresh_variable() {
   if (!fresh_variable.empty() && fresh_variable.back() != 'z')
     ++fresh_variable.back();
   else
@@ -215,12 +209,12 @@ std::string ffi::haskell_code_gen::next_fresh_variable() noexcept {
   return fresh_variable;
 }
 
-bool ffi::haskell_code_gen::requires_paren(int tid) noexcept {
+bool ffi::haskell_code_gen::requires_paren(int tid) {
   return tid == index<ctype::variant, function_type> ||
          tid == index<ctype::variant, pointer_type>;
 }
 
-bool ffi::haskell_code_gen::is_cchar(const ctype& type) noexcept {
+bool ffi::haskell_code_gen::is_cchar(const ctype& type) {
   if (std::holds_alternative<scalar_type>(type.value)) {
     const auto& scalar = std::get<scalar_type>(type.value);
     return scalar.sign == scalar_type::Unspecified &&
@@ -230,7 +224,7 @@ bool ffi::haskell_code_gen::is_cchar(const ctype& type) noexcept {
   return false;
 }
 
-bool ffi::haskell_code_gen::is_cstring(const ctype& type) noexcept {
+bool ffi::haskell_code_gen::is_cstring(const ctype& type) {
   if (std::holds_alternative<pointer_type>(type.value)) {
     const auto& pointer = std::get<pointer_type>(type.value);
     return is_cchar(*pointer.pointee);
@@ -238,7 +232,7 @@ bool ffi::haskell_code_gen::is_cstring(const ctype& type) noexcept {
   return false;
 }
 
-bool ffi::haskell_code_gen::is_void(const ctype& type) noexcept {
+bool ffi::haskell_code_gen::is_void(const ctype& type) {
   if (std::holds_alternative<scalar_type>(type.value)) {
     const auto& scalar = std::get<scalar_type>(type.value);
     return scalar.qualifier == scalar_type::Void;
@@ -246,7 +240,7 @@ bool ffi::haskell_code_gen::is_void(const ctype& type) noexcept {
   return false;
 }
 
-bool ffi::haskell_code_gen::is_function(const ctype& type) noexcept {
+bool ffi::haskell_code_gen::is_function(const ctype& type) {
   return std::holds_alternative<function_type>(type.value);
 }
 

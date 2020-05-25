@@ -27,37 +27,36 @@ class haskell_code_gen {
  public:
   explicit haskell_code_gen(config& cfg) : cfg{cfg} {}
 
-  void gen_module(const std::string& name, const module_contents& mod) noexcept;
-  void gen_module_prefix() noexcept;
+  void gen_module(const std::string& name, const module_contents& mod);
+  void gen_module_prefix();
 
   void gen_name(name_variant v, const std::string& name,
-                std::string_view scope = {}) noexcept;
+                std::string_view scope = {});
 
   void gen_entity_raw(const std::string& name, const ctype& type,
-                      bool use_forall = false,
-                      std::string_view scope = {}) noexcept;
-  void gen_entity(const_entity& entity, std::string_view scope = {}) noexcept;
-  void gen_type(const ctype& type, bool paren = false) noexcept;
-  void gen_function_type(const function_type& func) noexcept;
-  void gen_scalar_type(const scalar_type& scalar) noexcept;
-  void gen_opaque_type(const opaque_type& opaque) noexcept;
-  void gen_pointer_type(const pointer_type& pointer) noexcept;
+                      bool use_forall = false, std::string_view scope = {});
+  void gen_entity(const_entity& entity, std::string_view scope = {});
+  void gen_type(const ctype& type, bool paren = false);
+  void gen_function_type(const function_type& func);
+  void gen_scalar_type(const scalar_type& scalar);
+  void gen_opaque_type(const opaque_type& opaque);
+  void gen_pointer_type(const pointer_type& pointer);
 
-  void gen_tag(const std::string& name, const tag_type& tag) noexcept;
-  void gen_enum(const std::string& name, const enumeration& enm) noexcept;
+  void gen_tag(const std::string& name, const tag_type& tag);
+  void gen_enum(const std::string& name, const enumeration& enm);
   void gen_enum_item(const std::string& name, const std::string& item,
-                     intmax_t val) noexcept;
-  void gen_struct(const std::string& name, const structure& str) noexcept;
+                     intmax_t val);
+  void gen_struct(const std::string& name, const structure& str);
 
-  void clear_fresh_variable() noexcept;
-  std::string next_fresh_variable() noexcept;
+  void clear_fresh_variable();
+  std::string next_fresh_variable();
 
-  static bool requires_paren(int tid) noexcept;
+  static bool requires_paren(int tid);
 
-  static bool is_cchar(const ctype& type) noexcept;
-  static bool is_cstring(const ctype& type) noexcept;
-  static bool is_void(const ctype& type) noexcept;
-  static bool is_function(const ctype& type) noexcept;
+  static bool is_cchar(const ctype& type);
+  static bool is_cstring(const ctype& type);
+  static bool is_void(const ctype& type);
+  static bool is_function(const ctype& type);
 
   std::string_view name_resolve(name_variant v, scoped_name_view n) const;
 
