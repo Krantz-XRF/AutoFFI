@@ -32,10 +32,15 @@ namespace {
 auto name_break(std::string_view input) noexcept
     -> std::optional<std::pair<std::string_view, std::string_view>> {
   if (input.empty()) return std::nullopt;
-  const auto p1 = std::find_if(std::next(begin(input)), end(input), isupper);
-  const auto p2 = std::find_if_not(begin(input), end(input), isalnum);
-  const auto d = std::min(p1, p2) - begin(input);
-  const auto p_rest = d + (p1 > p2);
+  const auto p1 = std::find_if_not(begin(input), end(input), isalnum);
+  const auto p2 = [p1, input] {
+    const auto alpha_upper = [](char c) { return !isalpha(c) || isupper(c); };
+    if (std::all_of(begin(input), p1, alpha_upper)) return p1;
+    const auto second_upper = [](char, char c) { return isupper(c); };
+    return std::adjacent_find(begin(input), p1, second_upper);
+  }();
+  const auto d = p2 - begin(input);
+  const auto p_rest = d + (p1 == p2 && p1 != end(input));
   return std::pair{input.substr(0, d), input.substr(p_rest)};
 }
 
