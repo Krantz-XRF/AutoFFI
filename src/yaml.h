@@ -247,7 +247,7 @@ struct llvm::yaml::MappingTraits<ffi::config> {
     io.mapOptional("library_name", cfg.library_name);
     io.mapOptional("root_directory", cfg.root_directory);
     io.mapOptional("output_directory", cfg.output_directory);
-    io.mapOptional("file_names", cfg.file_names);
+    io.mapRequired("file_names", cfg.file_names);
     io.mapOptional("is_header_group", cfg.is_header_group);
     io.mapOptional("compiler_options", cfg.compiler_options);
     io.mapOptional("module_name_mapping", cfg.module_name_mapping);

@@ -42,10 +42,9 @@ ffi::info_collector::info_collector(config& cfg, std::string_view file_name,
     : cfg{cfg}, file_name{file_name}, current_module{current_module} {}
 
 void ffi::info_collector::HandleTranslationUnit(clang::ASTContext& context) {
-  auto* const pdecl = context.getTranslationUnitDecl();
   const auto is_hg = cfg.is_header_group.cend() !=
                      std::find(cfg.is_header_group.cbegin(),
                                cfg.is_header_group.cend(), file_name);
-  ast_visitor{cfg, context, is_hg}.match_translation_unit(*pdecl,
-                                                          current_module);
+  ast_visitor visitor{cfg, current_module, context, is_hg};
+  visitor.TraverseDecl(context.getTranslationUnitDecl());
 }

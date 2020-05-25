@@ -62,8 +62,9 @@ bool ffi::ast_visitor::check_decl(const clang::Decl* decl) const {
   const auto& sm = context.getSourceManager();
   const auto expansion_loc = sm.getExpansionLoc(decl->getBeginLoc());
   if (expansion_loc.isInvalid()) return false;
-  if (header_group) return !sm.isInSystemHeader(expansion_loc);
-  return sm.isInMainFile(expansion_loc);
+  const auto is_main_file = header_group ? !sm.isInSystemHeader(expansion_loc)
+                                         : sm.isInMainFile(expansion_loc);
+  return is_main_file && check_extern_c(*decl);
 }
 
 bool ffi::ast_visitor::check_extern_c(const clang::Decl& decl) const {
@@ -87,45 +88,34 @@ bool ffi::ast_visitor::check_extern_c(const clang::Decl& decl) const {
   return isDeclExternC;
 }
 
-void ffi::ast_visitor::match_translation_unit(
-    const clang::TranslationUnitDecl& decl, module_contents& mod) const {
-  for (auto d : decl.decls()) {
-    if (!check_decl(d)) continue;
-    if (auto entity = match_entity(*d); entity.has_value())
-      mod.entities.try_emplace(std::move(entity->first),
-                               std::move(entity->second));
-    else if (auto tag = match_tag(*d); tag.has_value())
-      mod.tags.emplace(std::move(tag.value()));
-  }
+bool ffi::ast_visitor::VisitVarDecl(clang::VarDecl* var) {
+  if (!check_decl(var)) return true;
+  if (auto v = match_var(*var)) mod.entities.emplace(std::move(*v));
+  return true;
 }
 
-std::optional<ffi::entity> ffi::ast_visitor::match_entity(
-    const clang::Decl& decl) const {
-  using K = clang::Decl::Kind;
-  switch (decl.getKind()) {
-    case K::Var:
-      return match_var(static_cast<const clang::VarDecl&>(decl));
-    case K::Function:
-      return match_function(static_cast<const clang::FunctionDecl&>(decl));
-    default:
-      return std::nullopt;
-  }
+bool ffi::ast_visitor::VisitEnumDecl(clang::EnumDecl* enm) {
+  if (!check_decl(enm)) return true;
+  if (auto e = match_enum(*enm)) mod.tags.emplace(std::move(*e));
+  return true;
 }
 
-std::optional<ffi::tag_decl> ffi::ast_visitor::match_tag(
-    const clang::Decl& decl) const {
-  using K = clang::Decl::Kind;
-  switch (decl.getKind()) {
-    case K::Enum:
-      return match_enum(static_cast<const clang::EnumDecl&>(decl));
-    case K::Record:
-    case K::CXXRecord:
-      return match_struct(static_cast<const clang::RecordDecl&>(decl));
-    case K::Typedef:
-      return match_typedef(static_cast<const clang::TypedefNameDecl&>(decl));
-    default:
-      return std::nullopt;
-  }
+bool ffi::ast_visitor::VisitRecordDecl(clang::RecordDecl* record) {
+  if (!check_decl(record)) return true;
+  if (auto r = match_struct(*record)) mod.tags.emplace(std::move(*r));
+  return true;
+}
+
+bool ffi::ast_visitor::VisitFunctionDecl(clang::FunctionDecl* function) {
+  if (!check_decl(function)) return true;
+  if (auto f = match_function(*function)) mod.entities.emplace(std::move(*f));
+  return true;
+}
+
+bool ffi::ast_visitor::VisitTypedefNameDecl(clang::TypedefNameDecl* alias) {
+  if (!check_decl(alias)) return true;
+  if (auto t = match_typedef(*alias)) mod.tags.emplace(std::move(*t));
+  return true;
 }
 
 std::optional<ffi::ctype> ffi::ast_visitor::match_type(
@@ -228,7 +218,7 @@ std::optional<ffi::ctype> ffi::ast_visitor::match_type(
         diags.Report(decl.getLocation(), id) << decl.getName() << i;
         return std::nullopt;
       }
-      func.params.push_back({"", std::move(paramType.value())});
+      func.params.emplace_back("", std::move(paramType.value()));
     }
 
     return ctype{std::move(func)};
@@ -293,7 +283,7 @@ std::optional<ffi::entity> ffi::ast_visitor::match_function(
     func.params.push_back(std::move(var.value()));
   }
 
-  return entity{std::move(name), ctype{std::move(func)}};
+  return entity{name, ctype{std::move(func)}};
 }
 
 std::optional<ffi::tag_decl> ffi::ast_visitor::match_enum(
@@ -324,7 +314,7 @@ std::optional<ffi::tag_decl> ffi::ast_visitor::match_enum(
 
   enumeration enm;
   enm.underlying_type = std::move(type.value());
-  for (auto item : decl.enumerators()) {
+  for (const auto* item : decl.enumerators()) {
     auto itemName = item->getName();
     auto initVal = item->getInitVal().getExtValue();
     enm.values.try_emplace(std::move(itemName), initVal);
@@ -350,10 +340,10 @@ std::optional<ffi::tag_decl> ffi::ast_visitor::match_struct(
   }
 
   structure record;
-  for (auto f : decl.fields()) {
+  for (const auto* f : decl.fields()) {
     auto type = match_type(*f, *f->getType().getTypePtr());
     if (!type.has_value()) return std::nullopt;
-    record.fields.push_back({f->getName(), std::move(type.value())});
+    record.fields.emplace_back(f->getName(), std::move(type.value()));
   }
 
   return tag_decl{name, tag_type{std::move(record)}};
@@ -363,9 +353,9 @@ std::optional<ffi::tag_decl> ffi::ast_visitor::match_typedef(
     const clang::TypedefNameDecl& decl) const {
   const auto& type = *decl.getUnderlyingType().getTypePtr();
   const auto name = decl.getName();
-  if (const auto enum_type = type.getAs<clang::EnumType>())
+  if (const auto* enum_type = type.getAs<clang::EnumType>())
     return match_enum(*enum_type->getDecl(), name);
-  if (const auto struct_type = type.getAs<clang::RecordType>())
+  if (const auto* struct_type = type.getAs<clang::RecordType>())
     return match_struct(*struct_type->getDecl(), name);
   return std::nullopt;
 }

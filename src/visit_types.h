@@ -19,7 +19,7 @@
 
 #include <optional>
 
-#include <clang/AST/AST.h>
+#include <clang/AST/RecursiveASTVisitor.h>
 
 #include "config.h"
 #include "module.h"
@@ -27,20 +27,21 @@
 #include "types.h"
 
 namespace ffi {
-class ast_visitor {
+class ast_visitor : public clang::RecursiveASTVisitor<ast_visitor> {
  public:
-  ast_visitor(config& cfg, clang::ASTContext& context, bool header_group)
-      : header_group{header_group}, cfg{cfg}, context{context} {}
+  ast_visitor(config& cfg, module_contents& mod, clang::ASTContext& context,
+              bool header_group)
+      : header_group{header_group}, cfg{cfg}, mod{mod}, context{context} {}
 
   [[nodiscard]] bool check_decl(const clang::Decl* decl) const;
   [[nodiscard]] bool check_extern_c(const clang::Decl& decl) const;
 
-  void match_translation_unit(const clang::TranslationUnitDecl& decl,
-                              module_contents& mod) const;
-  [[nodiscard]] std::optional<entity> match_entity(
-      const clang::Decl& decl) const;
-  [[nodiscard]] std::optional<tag_decl> match_tag(
-      const clang::Decl& decl) const;
+  bool VisitVarDecl(clang::VarDecl* var);
+  bool VisitEnumDecl(clang::EnumDecl* enm);
+  bool VisitRecordDecl(clang::RecordDecl* record);
+  bool VisitFunctionDecl(clang::FunctionDecl* function);
+  bool VisitTypedefNameDecl(clang::TypedefNameDecl* alias);
+
   [[nodiscard]] std::optional<ctype> match_type(const clang::NamedDecl& decl,
                                                 const clang::Type& type) const;
   [[nodiscard]] std::optional<entity> match_var_raw(
@@ -61,6 +62,7 @@ class ast_visitor {
  private:
   bool header_group;
   config& cfg;
+  module_contents& mod;
   clang::ASTContext& context;
 };
 }  // namespace ffi
