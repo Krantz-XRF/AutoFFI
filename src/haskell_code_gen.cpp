@@ -18,8 +18,7 @@
 #include "haskell_code_gen.h"
 
 #include <fmt/format.h>
-
-#include "gsl/gsl_assert"
+#include <gsl/gsl_assert>
 
 void ffi::haskell_code_gen::gen_module(const std::string& name,
                                        const module_contents& mod) {

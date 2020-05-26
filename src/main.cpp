@@ -67,7 +67,7 @@ const char version[]{
 int main(int argc, const char* argv[]) {
   // LLVM initialization
   llvm::InitLLVM init_llvm(argc, argv);
-  cl::HideUnrelatedOptions(category);
+  HideUnrelatedOptions(category);
 
   // auto-FFI options
   cl::SetVersionPrinter([](llvm::raw_ostream& os) { os << version << '\n'; });
