@@ -1,5 +1,5 @@
 ---
-title: auto-FFI Mid-Term Report
+title: auto-FFI Final Report
 theme: metropolis
 themeoptions:
 - progressbar=foot
