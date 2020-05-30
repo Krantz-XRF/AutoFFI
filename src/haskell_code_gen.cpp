@@ -20,6 +20,10 @@
 #include <fmt/format.h>
 #include <gsl/gsl_assert>
 
+namespace {
+constexpr size_t npos = std::numeric_limits<size_t>::max();
+}  // namespace
+
 void ffi::haskell_code_gen::gen_module(const std::string& name,
                                        const module_contents& mod) {
   if (auto p = cfg.file_name_converters.find(name);
@@ -181,6 +185,7 @@ void ffi::haskell_code_gen::gen_enum_item(const std::string& name,
 
 void ffi::haskell_code_gen::gen_struct(const std::string& name,
                                        const structure& str) {
+  // type declaration
   *os << "data ";
   gen_name(name_variant::type_ctor, name);
   *os << " = ";
@@ -193,9 +198,72 @@ void ffi::haskell_code_gen::gen_struct(const std::string& name,
       if (++f == end(str.fields)) break;
       *os << "  , ";
     }
-    *os << "  }";
+    *os << "  }\n";
+  }
+  // All pointers are of the same size and alignment
+  // Here, we temporarily turn off void_pointer_as_any_pointer
+  const auto backup_vpaap = cfg.void_ptr_as_any_ptr;
+  cfg.void_ptr_as_any_ptr = false;
+  // Storable instance
+  constexpr auto util_bindings =
+      "    let sizeAlign x = (sizeOf x, alignment x)\n"
+      "        makeSize = foldl' (\\sz (sx, ax) -> alignTo sz ax + sx) 0\n"
+      "        alignTo s a = ((s + a - 1) `quot` a) * a\n"
+      "    in ";
+  const auto gen_members = [this, &str](llvm::StringRef fun, size_t n = npos) {
+    n = std::min(n, str.fields.size());
+    *os << '[';
+    if (n > 0) {
+      size_t i = 0;
+      while (true) {
+        *os << fun << " (undefined :: ";
+        gen_type(str.fields[i].second);
+        *os << ")";
+        if (++i == n) break;
+        *os << ", ";
+      }
+    }
+    *os << ']';
+  };
+  *os << "instance Storable ";
+  gen_name(name_variant::type_ctor, name);
+  *os << " where";
+  *os << "\n  sizeOf _ =\n" << util_bindings << "makeSize ";
+  gen_members("sizeAlign");
+  *os << "\n  alignment _ = maximum ";
+  gen_members("alignment");
+  *os << "\n  peek p =\n" << util_bindings;
+  if (str.fields.empty()) {
+    *os << "pure ";
+    gen_name(name_variant::data_ctor, name);
+  } else {
+    gen_name(name_variant::data_ctor, name);
+    *os << "\n    <$> ";
+    size_t i = 0;
+    while (true) {
+      *os << "peekByteOff p (makeSize ";
+      gen_members("sizeAlign", i);
+      *os << ")";
+      if (++i == str.fields.size()) break;
+      *os << "\n    <*> ";
+    }
+  }
+  *os << "\n  poke p r =\n" << util_bindings;
+  if (str.fields.empty())
+    *os << "pure ()\n";
+  else {
+    *os << "do";
+    for (size_t i = 0; i < str.fields.size(); ++i) {
+      *os << "\n    pokeByteOff p (makeSize ";
+      gen_members("sizeAlign", i);
+      *os << ") (";
+      gen_name(name_variant::variable, str.fields[i].first, name);
+      *os << " r)";
+    }
   }
   *os << "\n\n";
+  // Recover void_pointer_as_any_pointer
+  cfg.void_ptr_as_any_ptr = backup_vpaap;
 }
 
 void ffi::haskell_code_gen::clear_fresh_variable() { fresh_variable.clear(); }
