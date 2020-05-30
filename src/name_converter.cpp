@@ -45,7 +45,7 @@ auto name_break(std::string_view input) noexcept
 }
 
 std::string case_convert_fragment(std::string_view word, name_case c) {
-  Expects(!word.empty());
+  if (word.empty()) return "";
   std::string res{};
   switch (c) {
     case name_case::snake_all_upper:
@@ -83,7 +83,7 @@ std::string case_convert(std::string_view name, name_case c, name_variant v) {
 
 }  // namespace
 
-std::string ffi::name_converter::convert(std::string_view s) const noexcept {
+std::string name_converter::convert(std::string_view s) const noexcept {
   // remove prefix
   if (auto [p1, p2] = std::mismatch(begin(remove_prefix), end(remove_prefix),
                                     begin(s), end(s));
