@@ -89,7 +89,8 @@ struct config {
   bool warn_no_c_linkage{true};
   bool warn_no_external_formal_linkage{false};
   bool void_ptr_as_any_ptr{true};
-  bool allow_rank_n_types{true};
+  bool allow_rank_n_types{false};
+  bool generate_storable_instances{true};
   name_converter_bundle converters;
   name_converter_map file_name_converters{};
   std::string library_name{"Library"};

@@ -242,6 +242,8 @@ struct llvm::yaml::MappingTraits<ffi::config> {
                    cfg.warn_no_external_formal_linkage);
     io.mapOptional("void_ptr_as_any_ptr", cfg.void_ptr_as_any_ptr);
     io.mapOptional("allow_rank_n_types", cfg.allow_rank_n_types);
+    io.mapOptional("generate_storable_instances",
+                   cfg.generate_storable_instances);
     io.mapOptional("name_converters", cfg.converters);
     io.mapOptional("file_name_converters", cfg.file_name_converters);
     io.mapOptional("library_name", cfg.library_name);
