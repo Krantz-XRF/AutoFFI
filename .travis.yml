@@ -31,17 +31,17 @@ install:
   - git clone -b 6.2.0 --depth 1 git://github.com/fmtlib/fmt.git
   - cd fmt && mkdir build && cd build
   - cmake -DFMT_TEST=OFF -DFMT_DOC=OFF ..
-  - sudo cmake --install . && cd ../..
+  - sudo make install . && cd ../..
   # Install spdlog 1.5.0
   - git clone -b v1.5.0 --depth 1 git://github.com/gabime/spdlog.git
   - cd spdlog && mkdir build && cd build
   - cmake -DSPDLOG_FMT_EXTERNAL=ON ..
-  - sudo cmake --install . && cd ../..
+  - sudo make install . && cd ../..
   # Install inja 2.2.0
   - git clone -b v2.2.0 --depth 1 git://github.com/pantor/inja.git
   - cd inja && mkdir build && cd build
   - cmake -DBUILD_TESTING=OFF -DBUILD_BENCHMARK=OFF ..
-  - sudo cmake --install . && cd ../..
+  - sudo make install . && cd ../..
 
 script:
   - mkdir build && cd build
