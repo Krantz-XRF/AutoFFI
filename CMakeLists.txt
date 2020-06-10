@@ -17,6 +17,9 @@ find_package(spdlog REQUIRED)
 # Use this fmt library in place of C++20 std::format
 find_package(fmt 6 REQUIRED)
 
+# Use string template engine inja
+find_package(inja CONFIG REQUIRED)
+
 # Use Microsoft.GSL
 set(GSL_CXX_STANDARD 17)
 add_subdirectory(GSL)
@@ -29,4 +32,4 @@ target_include_directories(auto-ffi SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS})
 target_link_directories(auto-ffi PRIVATE ${LLVM_LIBRARY_DIRS})
 target_link_libraries(auto-ffi PRIVATE
   clangTooling clangBasic clangASTMatchers
-  fmt::fmt Microsoft.GSL::GSL spdlog::spdlog)
+  fmt::fmt Microsoft.GSL::GSL spdlog::spdlog pantor::inja)
