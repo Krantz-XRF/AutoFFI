@@ -243,7 +243,9 @@ void ffi::haskell_code_gen::gen_struct(const std::string& name,
     while (true) {
       *os << "peekByteOff p (makeSize ";
       gen_members("sizeAlign", i);
-      *os << ")";
+      *os << " `alignTo` alignment (undefined :: ";
+      gen_type(str.fields[i].second);
+      *os << "))";
       if (++i == str.fields.size()) break;
       *os << "\n    <*> ";
     }
@@ -256,7 +258,9 @@ void ffi::haskell_code_gen::gen_struct(const std::string& name,
     for (size_t i = 0; i < str.fields.size(); ++i) {
       *os << "\n    pokeByteOff p (makeSize ";
       gen_members("sizeAlign", i);
-      *os << ") (";
+      *os << " `alignTo` alignment (undefined :: ";
+      gen_type(str.fields[i].second);
+      *os << ")) (";
       gen_name(name_variant::variable, str.fields[i].first, name);
       *os << " r)";
     }
