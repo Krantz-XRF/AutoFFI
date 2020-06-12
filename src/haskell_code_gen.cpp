@@ -55,11 +55,22 @@ void ffi::haskell_code_gen::gen_module(const std::string& name,
   add_callback(env, "gen_name", [this](name_variant v, std::string_view n) {
     return gen_name(v, n);
   });
-  add_callback(
-      env, "gen_scoped_name",
-      [this](name_variant v, std::string_view n, std::string_view scope) {
-        return gen_name(v, n, scope);
-      });
+  add_callback(env, "gen_variable", [this](std::string_view n) {
+    return gen_name(name_variant::variable, n);
+  });
+  add_callback(env, "gen_data_ctor", [this](std::string_view n) {
+    return gen_name(name_variant::data_ctor, n);
+  });
+  add_callback(env, "gen_type_ctor", [this](std::string_view n) {
+    return gen_name(name_variant::type_ctor, n);
+  });
+  add_callback(env, "gen_module_name", [this](std::string_view n) {
+    return gen_name(name_variant::module_name, n);
+  });
+  add_callback(env, "gen_scoped",
+               [this](std::string_view n, std::string_view scope) {
+                 return gen_name(name_variant::variable, n, scope);
+               });
   try {
     auto output_template = [this, &env] {
       if (!cfg.custom_template.empty()) {

@@ -5,7 +5,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# OPTIONS_GHC -Wno-missing-pattern-synonym-signatures #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
-module {{ gen_name("module_name", module.name) }} where
+module {{ gen_module_name(module.name) }} where
 
 import Foreign.C.Types
 import Foreign.C.String
@@ -22,15 +22,15 @@ import {{ imp }}
 ## endfor
 
 ## for s in module.structs
-data {{ gen_name("type_ctor", s.name) }} = {{ gen_name("data_ctor", s.name) }}
+data {{ gen_type_ctor(s.name) }} = {{ gen_data_ctor(s.name) }}
 ##   if length(s.fields)
 ##     for field in s.fields
-  {% if loop.is_first %}{ {% else %}, {% endif %}{{ gen_scoped_name("variable", field.name, s.name) }} :: {{ gen_type(field.type) }}
+  {% if loop.is_first %}{ {% else %}, {% endif %}{{ gen_scoped(field.name, s.name) }} :: {{ gen_type(field.type) }}
 ##     endfor
   }
 ##   endif
 ##   if cfg.generate_storable_instances
-instance Storable {{ gen_name("type_ctor", s.name) }} where
+instance Storable {{ gen_type_ctor(s.name) }} where
   sizeOf _ =
     let sizeAlign x = (sizeOf x, alignment x)
         makeSize = foldl' (\sz (sx, ax) -> alignTo sz ax + sx) 0
@@ -53,21 +53,21 @@ instance Storable {{ gen_name("type_ctor", s.name) }} where
         offsets = map makeSize $ inits [{% for field in s.fields %}sizeAlign (undefined :: {{ gen_type(field.type) }}){% if not loop.is_last %}, {% endif %}{% endfor %}]
     in do
 ##     for field in s.fields
-    pokeByteOff _p'0 (offsets !! {{ loop.index }}) ({{ gen_scoped_name("variable", field.name, s.name) }} _r'0)
+    pokeByteOff _p'0 (offsets !! {{ loop.index }}) ({{ gen_scoped(field.name, s.name) }} _r'0)
 ##     endfor
 ##   endif
 ## endfor
 
 ## for e in module.enums
-newtype {{ gen_name("type_ctor", e.name) }} = {{ gen_name("data_ctor", e.name) }}{ unwrap{{ gen_name("data_ctor", e.name) }} :: {{ gen_type(e.underlying_type) }} }
+newtype {{ gen_type_ctor(e.name) }} = {{ gen_data_ctor(e.name) }}{ unwrap{{ gen_data_ctor(e.name) }} :: {{ gen_type(e.underlying_type) }} }
 ##   if cfg.generate_storable_instances
   deriving (Storable)
 ##   endif
 ##   for name, value in e.enumerators
-pattern {{ gen_name("type_ctor", name) }} = {{ gen_name("data_ctor", e.name) }} {{ value }}
+pattern {{ gen_type_ctor(name) }} = {{ gen_data_ctor(e.name) }} {{ value }}
 ##   endfor
 ## endfor
 
 ## for e in module.entities
-foreign import ccall "{{ e.name }}" {{ gen_name("variable", e.name) }} :: {{ gen_type(e.type) }}
+foreign import ccall "{{ e.name }}" {{ gen_variable(e.name) }} :: {{ gen_type(e.type) }}
 ## endfor
