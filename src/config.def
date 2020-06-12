@@ -1,0 +1,25 @@
+#ifndef CONFIG_EXTRA
+#   define CONFIG_EXTRA(item) CONFIG(item)
+#endif
+
+CONFIG(allow_custom_fixed_size_int)
+CONFIG(assume_extern_c)
+CONFIG(warn_no_c_linkage)
+CONFIG(warn_no_external_formal_linkage)
+CONFIG(generate_storable_instances)
+CONFIG_EXTRA(name_converters)
+CONFIG_EXTRA(file_name_converters)
+CONFIG(library_name)
+CONFIG(root_directory)
+CONFIG(output_directory)
+CONFIG_EXTRA(file_names)
+CONFIG_EXTRA(is_header_group)
+CONFIG_EXTRA(compiler_options)
+CONFIG_EXTRA(module_name_mapping)
+CONFIG_EXTRA(explicit_name_mapping)
+CONFIG_EXTRA(custom_template)
+CONFIG_EXTRA(inja_set_trim_blocks)
+CONFIG_EXTRA(inja_set_lstrip_blocks)
+
+#undef CONFIG
+#undef CONFIG_EXTRA

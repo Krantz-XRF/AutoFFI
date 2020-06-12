@@ -88,10 +88,8 @@ struct config {
   bool assume_extern_c{false};
   bool warn_no_c_linkage{true};
   bool warn_no_external_formal_linkage{false};
-  bool void_ptr_as_any_ptr{true};
-  bool allow_rank_n_types{false};
   bool generate_storable_instances{true};
-  name_converter_bundle converters;
+  name_converter_bundle name_converters;
   name_converter_map file_name_converters{};
   std::string library_name{"Library"};
   std::string root_directory{};
@@ -101,6 +99,9 @@ struct config {
   std::vector<std::string> compiler_options{};
   name_resolver::name_map module_name_mapping{};
   std::map<std::string, name_resolver, std::less<>> explicit_name_mapping{};
+  bool inja_set_trim_blocks{false};
+  bool inja_set_lstrip_blocks{false};
+  std::string custom_template{};
   // internal, should not be exported to config files
   name_resolver::rev_name_map rev_modules;
 };

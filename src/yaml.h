@@ -234,25 +234,7 @@ struct llvm::yaml::MappingTraits<ffi::name_resolver> {
 template <>
 struct llvm::yaml::MappingTraits<ffi::config> {
   static void mapping(IO& io, ffi::config& cfg) {
-    io.mapOptional("allow_custom_fixed_size_int",
-                   cfg.allow_custom_fixed_size_int);
-    io.mapOptional("assume_extern_c", cfg.assume_extern_c);
-    io.mapOptional("warn_no_c_linkage", cfg.warn_no_c_linkage);
-    io.mapOptional("warn_no_external_formal_linkage",
-                   cfg.warn_no_external_formal_linkage);
-    io.mapOptional("void_ptr_as_any_ptr", cfg.void_ptr_as_any_ptr);
-    io.mapOptional("allow_rank_n_types", cfg.allow_rank_n_types);
-    io.mapOptional("generate_storable_instances",
-                   cfg.generate_storable_instances);
-    io.mapOptional("name_converters", cfg.converters);
-    io.mapOptional("file_name_converters", cfg.file_name_converters);
-    io.mapOptional("library_name", cfg.library_name);
-    io.mapOptional("root_directory", cfg.root_directory);
-    io.mapOptional("output_directory", cfg.output_directory);
-    io.mapRequired("file_names", cfg.file_names);
-    io.mapOptional("is_header_group", cfg.is_header_group);
-    io.mapOptional("compiler_options", cfg.compiler_options);
-    io.mapOptional("module_name_mapping", cfg.module_name_mapping);
-    io.mapOptional("explicit_name_mapping", cfg.explicit_name_mapping);
+#define CONFIG(item) io.mapOptional(#item, cfg.item);
+#include "config.def"
   }
 };

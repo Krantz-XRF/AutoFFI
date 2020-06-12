@@ -1,3 +1,7 @@
+target_embed_files(auto-ffi
+  NAMESPACE ffi HEADER templates.h
+  INPUT default_template.hs)
+
 target_sources(auto-ffi PRIVATE
   # Driver Program
   "config.h" "config.cpp" "main.cpp" "driver.h" "driver.cpp"
@@ -10,5 +14,7 @@ target_sources(auto-ffi PRIVATE
   "name_converter.h" "name_converter.cpp"
   "visit_types.h" "visit_types.cpp"
   "module.h" "module.cpp"
-  # LLVM YAML
-  "yaml.h")
+  # Inja Related
+  "inja_callback.h"
+  # LLVM YAML/Nlohmann JSON
+  "yaml.h" "json.h" "json.cpp")

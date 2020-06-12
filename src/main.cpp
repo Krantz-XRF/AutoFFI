@@ -32,6 +32,7 @@
 #include "config.h"
 #include "driver.h"
 #include "haskell_code_gen.h"
+#include "json.h"
 #include "yaml.h"
 
 namespace cl = llvm::cl;
@@ -44,6 +45,8 @@ cl::opt<bool> dump_config{
     cl::desc{"Dump configuration options to stdout and exit."}};
 cl::opt<bool> yaml{"yaml", cl::cat{category},
                    cl::desc{"Dump YAML for generated modules."}};
+cl::opt<bool> json{"json", cl::cat{category},
+                   cl::desc{"Dump JSON for generated modules"}};
 cl::opt<std::string> verbose{
     "verbose", cl::cat{category}, cl::init("info"), cl::value_desc{"level"},
     cl::desc{"Verbosity: [trace, debug, info, warning, error, critical, off]"}};
@@ -149,6 +152,11 @@ int main(int argc, const char* argv[]) {
     if (yaml) {
       llvm::yaml::Output output{llvm::outs()};
       output << driver.modules;
+    }
+
+    if (json) {
+      nlohmann::json j = driver.modules;
+      llvm::outs() << j.dump(2) << '\n';
     }
 
     ffi::haskell_code_gen code_gen{driver.cfg};

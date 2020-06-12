@@ -28,28 +28,18 @@ class haskell_code_gen {
   explicit haskell_code_gen(config& cfg) : cfg{cfg} {}
 
   void gen_module(const std::string& name, const module_contents& mod);
-  void gen_module_prefix();
 
-  void gen_name(name_variant v, const std::string& name,
-                std::string_view scope = {});
+  std::string_view gen_name(name_variant v, std::string_view name,
+                            std::string_view scope = {});
 
-  void gen_entity_raw(const std::string& name, const ctype& type,
-                      bool use_forall = false, std::string_view scope = {});
-  void gen_entity(const_entity& entity, std::string_view scope = {});
-  void gen_type(const ctype& type, bool paren = false);
-  void gen_function_type(const function_type& func);
-  void gen_scalar_type(const scalar_type& scalar);
-  void gen_opaque_type(const opaque_type& opaque);
-  void gen_pointer_type(const pointer_type& pointer);
+  std::string gen_type(const ctype& type);
 
-  void gen_tag(const std::string& name, const tag_type& tag);
-  void gen_enum(const std::string& name, const enumeration& enm);
-  void gen_enum_item(const std::string& name, const std::string& item,
-                     intmax_t val);
-  void gen_struct(const std::string& name, const structure& str);
-
-  void clear_fresh_variable();
-  std::string next_fresh_variable();
+ protected:
+  void gen_type(llvm::raw_ostream& os, const ctype& type, bool paren = false);
+  void gen_function_type(llvm::raw_ostream& os, const function_type& func);
+  void gen_scalar_type(llvm::raw_ostream& os, const scalar_type& scalar);
+  void gen_opaque_type(llvm::raw_ostream& os, const opaque_type& opaque);
+  void gen_pointer_type(llvm::raw_ostream& os, const pointer_type& pointer);
 
   static bool requires_paren(int tid);
 
@@ -60,28 +50,8 @@ class haskell_code_gen {
 
   std::string_view name_resolve(name_variant v, scoped_name_view n) const;
 
- protected:
-  class explicit_for_all_handler {
-   public:
-    explicit explicit_for_all_handler(haskell_code_gen& g);
-    ~explicit_for_all_handler();
-
-    haskell_code_gen* operator->() const;
-
-   private:
-    haskell_code_gen& code_gen;
-    std::string buffer;
-    llvm::raw_string_ostream os;
-    llvm::raw_ostream* backup_os;
-    bool backup_void_ptr_as_any_ptr;
-  };
-
-  explicit_for_all_handler explicit_for_all();
-
  private:
   config& cfg;
   name_resolver* resolver{nullptr};
-  llvm::raw_ostream* os{nullptr};
-  std::string fresh_variable;
 };
 }  // namespace ffi
