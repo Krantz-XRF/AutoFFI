@@ -33,6 +33,7 @@
 #include "driver.h"
 #include "haskell_code_gen.h"
 #include "json.h"
+#include "templates.h"
 #include "yaml.h"
 
 namespace cl = llvm::cl;
@@ -42,9 +43,12 @@ cl::OptionCategory category{"auto-FFI Options"};
 cl::opt<bool> help{"h", cl::desc{"Alias for -help"}, cl::Hidden};
 cl::opt<bool> dump_config{
     "dump-config", cl::cat{category},
-    cl::desc{"Dump configuration options to stdout and exit."}};
+    cl::desc{"Dump configuration options to stdout and exit"}};
+cl::opt<bool> dump_template{
+    "dump-template", cl::cat{category},
+    cl::desc{"Dump output template to stdout and exit"}};
 cl::opt<bool> yaml{"yaml", cl::cat{category},
-                   cl::desc{"Dump YAML for generated modules."}};
+                   cl::desc{"Dump YAML for generated modules"}};
 cl::opt<bool> json{"json", cl::cat{category},
                    cl::desc{"Dump JSON for generated modules"}};
 cl::opt<std::string> verbose{
@@ -97,6 +101,12 @@ int main(int argc, const char* argv[]) {
   if (dump_config) {
     llvm::yaml::Output output{llvm::outs()};
     output << driver.cfg;
+    return 0;
+  }
+
+  // Template
+  if (dump_template) {
+    llvm::outs() << ffi::default_template_hs;
     return 0;
   }
 
