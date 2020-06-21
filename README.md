@@ -20,12 +20,16 @@ LLVM 10 changed signature for `clang::tooling::FrontendActionFactory::create`, s
 
 ### Build from Source
 
-- Install LLVM, Clang, and `libfmt`.
+- Install LLVM, Clang, `libfmt`, `spdlog`, and `Inja`.
   - LLVM/Clang: Use the [pre-built binaries](https://releases.llvm.org/download.html#9.0.1) or compile from source.
     - e.g. In the Travis CI build script, I install from LLVM's official `apt` repo (Ubuntu/Debian only).
     - Note that the pre-built binary packages for Windows do not have C++ headers with them, and thus are not usable.
   - `libfmt`: Follow the instructions on [the official website](https://fmt.dev/latest/usage.html)
     - e.g. In the Travis CI build script, I clone [the GitHub repo](https://github.com/fmtlib/fmt), check out tag `6.2.0`, and use CMake to build the package.
+  - `spdlog`: Follow the instructions [here](https://github.com/gabime/spdlog#install)
+    - e.g. In the Travis CI build script, I clone [the GitHub repo](https://github.com/gabime/spdlog), check out tag `v1.5.0`, and use CMake to build the package.
+  - `Inja`: Follow the instructions [here](https://pantor.github.io/inja)
+    - e.g. In the Travis CI build script, I clone [the GitHub repo](https://github.com/pantor/inja), check out tag `v2.2.0`, and use CMake to build the package.
 - Use CMake to build from source:
   - e.g. on UNIX-like systems (or MSYS2 on Windows):
 
@@ -67,3 +71,11 @@ auto-FFI [options] [<file> ...]
 ## Configuration File
 
 The configuration file of auto-FFI use the YAML format. To begin, run `auto-FFI --dump-config > config.yaml` to get an example configuration file. The option names should be self-explanatory.
+
+## Code Generation Template
+
+The code generation template of auto-FFI can be found in [the source tree](https://github.com/Krantz-XRF/auto-FFI/blob/master/src/default_template.hs). Also, run `auto-FFI --dump-template > template.hs` will provide you the default template. For template grammar, refer to [documentation of Inja](https://github.com/pantor/inja).
+
+## Read More
+
+Please refer to [the Releases page](https://github.com/Krantz-XRF/auto-FFI/releases) for my presentation slides and reports.
